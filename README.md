@@ -90,3 +90,61 @@ For open source projects, say how it is licensed.
 
 ## Project status
 If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+# Resume Parser (FastAPI Version)
+
+This project provides a FastAPI-based API to parse resumes (PDF or DOCX) using the Gemini AI model and returns structured JSON output.
+
+## Setup
+
+1. **Install dependencies:**
+
+```bash
+pip install -r requirements.txt
+```
+
+Or, if you want to ensure FastAPI and Uvicorn are installed:
+
+```bash
+pip install fastapi uvicorn[standard] aiofiles
+```
+
+2. **Set your Gemini API key:**
+
+Export your API key as an environment variable:
+
+```bash
+export API_KEY=your_gemini_api_key_here
+```
+
+## Running the FastAPI Server
+
+From the project root, run:
+
+```bash
+uvicorn app:app --reload
+```
+
+This will start the server at `http://127.0.0.1:8000`.
+
+## Usage Example
+
+### Parse a Resume via API
+
+Send a POST request to `/parse_resume` with a PDF or DOCX file:
+
+#### Using `curl`:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/parse_resume" \
+  -H  "accept: application/json" \
+  -H  "Content-Type: multipart/form-data" \
+  -F "file=@/path/to/your/resume.pdf"
+```
+
+#### Using Swagger UI:
+
+Visit `http://127.0.0.1:8000/docs` in your browser and use the interactive interface to upload a file and see the JSON response.
+
+---
+
+The old CLI usage is deprecated for this API version.
