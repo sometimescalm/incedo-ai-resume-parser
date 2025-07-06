@@ -145,6 +145,40 @@ curl -X POST "http://127.0.0.1:8000/parse_resume" \
 
 Visit `http://127.0.0.1:8000/docs` in your browser and use the interactive interface to upload a file and see the JSON response.
 
+### Example Response
+
+When you upload a resume, you will receive a JSON response in the following format:
+
+```json
+{
+  "name": "John Doe",
+  "designation": "Software Engineer",
+  "summary": "Experienced developer with expertise in building scalable APIs.",
+  "certifications": "Certified Python Developer",
+  "primary_skills": "Python, FastAPI, REST",
+  "secondary_skills": "Docker, Kubernetes, SQL",
+  "tools": "Git, Jenkins, VS Code",
+  "core_competencies": "API Design, Automation, Problem Solving",
+  "education": "Bachelor of Technology in Computer Science",
+  "previous_organization": "Tech Solutions Inc.",
+  "work_experience": "Software Engineer at Tech Solutions Inc. (2020-2024): Developed APIs and automated workflows.",
+  "projects": [
+    {
+      "project_no": "1",
+      "project_name": "API Automation Platform",
+      "client_description": "Internal project for workflow automation.",
+      "project_duration": "12 months",
+      "project_description": "Built a platform to automate API testing and deployment.",
+      "role_name": "Lead Developer",
+      "work_done": "Designed architecture, implemented core modules, led team.",
+      "technologies": "Python, FastAPI, Docker",
+      "platform": "Cloud",
+      "key_activities": "API development, CI/CD integration, team leadership"
+    }
+  ]
+}
+```
+
 ---
 
-The old CLI usage is deprecated for this API version.
+The old CLI usage is deprecated for this API version. resumes (PDF or DOCX) using the Gemini AI model and returns structured JSON output.
