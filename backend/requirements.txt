@@ -1,0 +1,5 @@
+python-docx
+docx2txt
+pdfplumber
+google-generativeai
+click
