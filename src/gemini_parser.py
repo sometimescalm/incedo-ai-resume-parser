@@ -17,31 +17,38 @@ Output Requirements:
 - If there are line breaks in any string, they must be escaped using \\n.
 - Return only the JSON object, in a single line, with no formatting, no extra explanation, and no markdown wrappers.
 
-Extract these exact fields and structure:
+Extract these exact fields:
+- full_name: Full name of the candidate.
+- email_id: Email address.
+- phone: Phone number.
+- professional_summary: A concise 3–4 line summary. If not present, generate one based on work experience and skills. Escape line breaks with \\n.
+- github_portfolio: GitHub profile URL, if available.
+- linkedin_id: LinkedIn profile URL.
+- work_experience: Summarized work history and responsibilities as per below json structure.
+- skills: Combine all relevant technical skills into one comma-separated string.
+- education: Extract highest education detail in a single line.
+- certifications: Combine all certifications into one comma-separated string.
+- designation: Current or most recent job title.
+Return only the JSON object, in a single line, with no formatting, no extra explanation, and no markdown wrappers.
+JSON structure:
 {{
-    "name": "",
+    "full_name": "",
+    "email_id": "",
+    "phone": "",
+    "professional_summary": "",
+    "github_portfolio": "",
+    "linkedin_id": "",
     "designation": "",
-    "summary": "",
     "certifications": "",
-    "primary_skills": "",
-    "secondary_skills": "",
-    "tools": "",
-    "core_competencies": "",
+    "skills": "",
     "education": "",
-    "previous_organization": "",
-    "work_experience": "",
-    "projects": [
+    "work_experience": [
         {{
-            "project_no": "",
-            "project_name": "",
-            "client_description": "",
+            "company_name": "",
             "project_duration": "",
             "project_description": "",
             "role_name": "",
-            "work_done": "",
-            "technologies": "",
-            "platform": "",
-            "key_activities": ""
+            "technologies": ""
         }}
     ]
 }}
