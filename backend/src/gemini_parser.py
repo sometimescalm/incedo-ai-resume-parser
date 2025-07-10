@@ -6,6 +6,15 @@ import json
 
 import google.generativeai as genai
 
+try:
+    import face_recognition
+    FACE_RECOGNITION_AVAILABLE = True
+except ImportError:
+    FACE_RECOGNITION_AVAILABLE = False
+from PIL import Image
+import numpy as np
+import io
+
 
 PROMPT_TEMPLATE = """
 You are an AI bot designed to act as a professional resume parser. You are given a resume, and your task is to extract the following fields and return them in valid JSON format, matching the structure below.
@@ -72,8 +81,7 @@ def extract_text(file_path):
         raise ValueError("Unsupported file format")
 
 def parse_resume_with_gemini(file_path):
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    # import pdb;pdb.set_trace()
+    genai.configure(api_key="AIzaSyBfa2tgjCfgMj1mzTGfhbTB-ksSzeFq_f8")
     model = genai.GenerativeModel('gemini-2.5-flash')
 
     resume_text = extract_text(file_path)
@@ -81,15 +89,60 @@ def parse_resume_with_gemini(file_path):
     response = model.generate_content(prompt)
 
     print("Response from Gemini:", response.text)
-    # print(response.text)
-    #response.raise_for_status()
-    
     result = response.text.strip()
     print(f"type Response from Gemini: {type(result)}   lenght  {len(result)}")
     result = json.loads(result)
+
+    # Extract face images if PDF
+    ext = os.path.splitext(file_path)[1].lower()
+    face_images = []
+    if ext == ".pdf":
+        output_path = os.path.splitext(file_path)[0]
+        face_images = extract_face_from_pdf(file_path, output_path)
+    result["face_images"] = face_images
     return result
+
+def extract_face_from_pdf(pdf_path, output_image_path):
+    image_paths = []
+    if not FACE_RECOGNITION_AVAILABLE:
+        print("face_recognition not installed, skipping face extraction.")
+        return ["default_face.jpg"]
+    with pdfplumber.open(pdf_path) as pdf:
+        # Process only the first page
+        page = pdf.pages[0]
+        img_bytes = page.to_image(resolution=300).original.convert("RGB")
+
+        # Convert PIL image to numpy array
+        img_np = np.array(img_bytes)
+
+        # Find face locations
+        face_locations = face_recognition.face_locations(img_np)
+
+        if not face_locations:
+            print("No face detected. Returning default face image.")
+            return ["default_face.jpg"]
+
+        for i, (top, right, bottom, left) in enumerate(face_locations):
+            # Extend box downward for shoulders and slightly upward
+            extended_top = max(top - 20, 0)
+            extended_bottom = min(bottom + int((bottom - top) * 0.25), img_np.shape[0])
+
+            # Crop the region
+            face_img = img_bytes.crop((left, extended_top, right, extended_bottom))
+
+            # Save the image
+            img_path = f"{output_image_path}_face{i+1}.jpg"
+            face_img.save(img_path)
+            image_paths.append(img_path)
+            print(f"Saved: {img_path}")
+    return image_paths
 
 if __name__ == "__main__":
     file_path = "Shubham_Wadkar_Resume.pdf"
+    # Parse resume
     parsed = parse_resume_with_gemini(file_path)
     print(json.dumps(parsed, indent=2))
+    
+    # Extract face from the resume
+    output_path = os.path.splitext(file_path)[0]  # Use the same name as resume without extension
+    extract_face_from_pdf(file_path, output_path)
