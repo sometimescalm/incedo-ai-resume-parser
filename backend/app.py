@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import shutil
 import os
 import uuid
@@ -7,6 +8,9 @@ from src.gemini_parser import parse_resume_with_gemini
 import aiofiles
 
 app = FastAPI()
+
+# Serve the temp_uploads directory and backend root for images
+app.mount("/images", StaticFiles(directory=os.path.abspath(".")), name="images")
 
 UPLOAD_DIR = "temp_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
