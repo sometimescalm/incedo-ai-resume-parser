@@ -81,7 +81,7 @@ def extract_text(file_path):
         raise ValueError("Unsupported file format")
 
 def parse_resume_with_gemini(file_path):
-    genai.configure(api_key="AIzaSyBfa2tgjCfgMj1mzTGfhbTB-ksSzeFq_f8")
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     model = genai.GenerativeModel('gemini-2.5-flash')
 
     resume_text = extract_text(file_path)
