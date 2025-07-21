@@ -83,3 +83,5 @@ When you upload a resume, you will receive a JSON response in the following form
 ---
 
 The old CLI usage is deprecated for this API version. resumes (PDF or DOCX) using the Gemini AI model and returns structured JSON output.
+
+python3.10 -m uvicorn app:app --reload

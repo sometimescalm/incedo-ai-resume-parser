@@ -97,7 +97,7 @@ def parse_resume_with_gemini(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     face_images = []
     if ext == ".pdf":
-        output_path = os.path.splitext(file_path)[0]
+        output_path = "../../temp_uploads"
         face_images = extract_face_from_pdf(file_path, output_path)
     result["face_images"] = face_images
     return result

@@ -3,3 +3,13 @@ docx2txt
 pdfplumber
 google-generativeai
 click
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles
+requests
+pandas
+openpyxl
+pytest
+python-dotenv
+numpy
