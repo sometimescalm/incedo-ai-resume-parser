@@ -6,15 +6,23 @@ import os
 import uuid
 from src.gemini_parser import parse_resume_with_gemini
 import aiofiles
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
 
 app = FastAPI()
 
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Only allow React dev server
+    allow_origins=["http://localhost:3000"],  
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],  
+    allow_headers=["*"],
 )
 
 UPLOAD_DIR = "temp_uploads"

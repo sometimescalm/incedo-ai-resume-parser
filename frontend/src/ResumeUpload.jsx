@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import 'antd/dist/reset.css';
-import { Upload, Typography, Card, Button, Layout} from 'antd';
+import { Upload, Typography, Card, Button, Layout } from 'antd';
 import { InboxOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.entry';
+import mammoth from 'mammoth';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -21,7 +22,7 @@ const ResumeUpload = () => {
   const props = {
     name: 'file',
     multiple: false,
-    accept: '.pdf',
+    accept: '.pdf,.docx',
     showUploadList: false,
     beforeUpload: (file) => {
       setSelectedFile(file);
@@ -66,55 +67,71 @@ const ResumeUpload = () => {
     });
   };
 
+  const extractTextFromDocx = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  };
+
   const handleProceed = async () => {
-  if (!selectedFile) return;
-  setLoading(true);
+    if (!selectedFile) return;
+    setLoading(true);
 
-  try {
-    const text = await extractTextFromPDF(selectedFile);
+    try {
+      let text;
+      if (selectedFile.name.endsWith('.pdf')) {
+        text = await extractTextFromPDF(selectedFile);
+        console.log(text)
+      } else if (selectedFile.name.endsWith('.docx')) {
+        text = await extractTextFromDocx(selectedFile); // You'd need to implement this
+        console.log(text)
+      } else {
+        alert("Unsupported file format.");
+        return;
+      }
 
-    if (!text || text.trim().length === 0) {
-      console.log("⚠️ Empty file detected");
-      alert("❌ The uploaded file appears to be empty. Please upload a valid resume.");
-      return;
+      if (!text || text.trim().length === 0) {
+        console.log("⚠️ Empty file detected");
+        alert("❌ The uploaded file appears to be empty. Please upload a valid resume.");
+        return;
+      }
+
+      if (!isResumeText(text)) {
+        console.log("⚠️ Non-resume file detected");
+        alert("❌ This doesn't look like a resume. Please upload a valid resume file.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch('http://127.0.0.1:8000/parse_resume', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server Error:", errorText);
+        alert("❌ Server error while processing the resume.");
+        return;
+      }
+
+      const data = await response.json();
+      if (!data || typeof data !== "object") {
+        alert("❌ Received invalid response from the server.");
+        return;
+      }
+
+      navigate('/resume-builder', { state: { parsedData: data } });
+
+    } catch (error) {
+      console.error("Unhandled Error:", error);
+      alert("❌ Something went wrong during file validation or upload.");
+    } finally {
+      setLoading(false);
     }
-
-    if (!isResumeText(text)) {
-      console.log("⚠️ Non-resume file detected");
-      alert("❌ This doesn't look like a resume. Please upload a valid resume file.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
-    const response = await fetch('http://127.0.0.1:8000/parse_resume', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Server Error:", errorText);
-      alert("❌ Server error while processing the resume.");
-      return;
-    }
-
-    const data = await response.json();
-    if (!data || typeof data !== "object") {
-      alert("❌ Received invalid response from the server.");
-      return;
-    }
-
-    navigate('/resume-builder', { state: { parsedData: data } });
-
-  } catch (error) {
-    console.error("Unhandled Error:", error);
-    alert("❌ Something went wrong during file validation or upload.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
   return (

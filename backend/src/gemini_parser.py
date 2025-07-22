@@ -1,10 +1,18 @@
-import requests
 import pdfplumber
 import docx2txt
 import os
 import json
-
 import google.generativeai as genai
+import fitz
+from PIL import Image
+import cv2
+import numpy as np
+
+try:
+    import face_recognition
+    FACE_RECOGNITION_AVAILABLE = True
+except ImportError:
+    FACE_RECOGNITION_AVAILABLE = False
 
 
 PROMPT_TEMPLATE = """
@@ -24,11 +32,12 @@ Extract these exact fields:
 - professional_summary: A concise 3–4 line summary. If not present, generate one based on work experience and skills. Escape line breaks with \\n.
 - github_portfolio: GitHub profile URL, if available.
 - linkedin_id: LinkedIn profile URL.
-- work_experience: Summarized work history and responsibilities as per below json structure.
-- skills: Combine all relevant technical skills into one comma-separated string.
-- education: Extract highest education detail in a single line.
+- work_experience:  Return as an array of objects sorted in **reverse chronological order** in the below json format.
+- skills: strictly only Top 10–15 technical skills (comma-separated, no duplicates, no soft skills).Extract only the skills that are explicitly mentioned in the resume.
+- education: Return as an array of objects sorted in **reverse chronological order** in the below json format.
 - certifications: Combine all certifications into one comma-separated string.
 - designation: Current or most recent job title.
+- projects: Summarized projects and descriptions as per below json structure.
 Return only the JSON object, in a single line, with no formatting, no extra explanation, and no markdown wrappers.
 JSON structure:
 {{
@@ -41,7 +50,16 @@ JSON structure:
     "designation": "",
     "certifications": "",
     "skills": "",
-    "education": "",
+    "education": [
+        {{
+            "degree": "",
+            "school": "",
+            "location": "",
+            "date": "",
+            "gpa": "",
+            "info": ""
+        }} 
+    ],
     "work_experience": [
         {{
             "company_name": "",
@@ -50,11 +68,18 @@ JSON structure:
             "role_name": "",
             "technologies": ""
         }}
+    ],
+    "projects": [
+        {{
+            "project_name":"",
+            "project_description":""
+        }}
     ]
 }}
 
 Resume content: {resume_text}
 """
+
 
 def extract_text(file_path):
     ext = os.path.splitext(file_path)[1].lower()
@@ -71,9 +96,9 @@ def extract_text(file_path):
     else:
         raise ValueError("Unsupported file format")
 
+
 def parse_resume_with_gemini(file_path):
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    # import pdb;pdb.set_trace()
+    genai.configure(api_key="AIzaSyBZbKeZYnMy-BlDCycaNGrJHfq1KwoGXiY")
     model = genai.GenerativeModel('gemini-2.5-flash')
 
     resume_text = extract_text(file_path)
@@ -85,9 +110,52 @@ def parse_resume_with_gemini(file_path):
     #response.raise_for_status()
     
     result = response.text.strip()
-    print(f"type Response from Gemini: {type(result)}   lenght  {len(result)}")
     result = json.loads(result)
+
+    # Extract face images if PDF
+    ext = os.path.splitext(file_path)[1].lower()
+    face_images = []
+    if ext == ".pdf":
+        face_images = extract_face_from_pdf(file_path)
+    result["face_images"] = face_images
     return result
+
+
+def extract_face_from_pdf(pdf_path, output_dir="static/face_images"):
+    os.makedirs(output_dir, exist_ok=True)
+    image_paths = []
+
+    if not FACE_RECOGNITION_AVAILABLE:
+        print("face_recognition not installed.")
+        return ["default_face.jpg"]
+
+    doc = fitz.open(pdf_path)
+    page = doc.load_page(0)
+    pix = page.get_pixmap(dpi=500)
+    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    img_np = np.array(img)
+
+    face_locations = face_recognition.face_locations(img_np)
+    print(f"Detected faces: {len(face_locations)}")
+
+    for i, (top, right, bottom, left) in enumerate(face_locations):
+        # Add padding around face
+        extended_top = max(top - 20, 0)
+        extended_bottom = min(bottom + int((bottom - top) * 0.25), img_np.shape[0])
+        extended_left = max(left - 20, 0)
+        extended_right = min(right + 20, img_np.shape[1])
+
+        # Crop face from image
+        face = img_np[extended_top:extended_bottom, extended_left:extended_right]
+
+        # Save face directly without additional zooming
+        face_image_path = os.path.join(output_dir, f"FaceImage_face{i+1}.jpg")
+        cv2.imwrite(face_image_path, cv2.cvtColor(face, cv2.COLOR_RGB2BGR))
+        image_paths.append(f"/static/face_images/FaceImage_face{i+1}.jpg")
+        print(f"Saved face image: {face_image_path}")
+
+    return image_paths
+
 
 if __name__ == "__main__":
     file_path = "Shubham_Wadkar_Resume.pdf"

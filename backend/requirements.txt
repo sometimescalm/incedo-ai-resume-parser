@@ -1,5 +1,9 @@
+fastapi
+aiofiles
 python-docx
 docx2txt
 pdfplumber
 google-generativeai
-click
+numpy
+Pillow
+face_recognition
