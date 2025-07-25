@@ -10,6 +10,5 @@ aiofiles
 requests
 pandas
 openpyxl
-pytest
 python-dotenv
 numpy

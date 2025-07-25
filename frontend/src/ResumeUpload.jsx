@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import 'antd/dist/reset.css';
-import { Upload, Typography, Card, Button, Layout} from 'antd';
+import { Upload, Typography, Card, Button, Layout, Steps, Spin } from 'antd';
 import { InboxOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.entry';
+import mammoth from 'mammoth';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -16,12 +17,23 @@ const { Header, Content } = Layout;
 const ResumeUpload = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showSteps, setShowSteps] = useState(false);
+
   const navigate = useNavigate();
+
+  const stepItems = [
+    { title: 'Analyzing your uploaded resume' },
+    { title: 'Extracting text from the uploaded resume' },
+    { title: 'Mapping to the Incedo template' },
+    { title: 'Finalizing and redirecting' },
+  ];
+
 
   const props = {
     name: 'file',
     multiple: false,
-    accept: '.pdf',
+    accept: '.pdf,.docx',
     showUploadList: false,
     beforeUpload: (file) => {
       setSelectedFile(file);
@@ -66,55 +78,89 @@ const ResumeUpload = () => {
     });
   };
 
+  const extractTextFromDocx = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  };
+
+  const simulateSteps = async () => {
+    for (let i = 0; i < stepItems.length; i++) {
+      setCurrentStep(i);
+      await new Promise(resolve => setTimeout(resolve, 800)); // ~800ms per step
+    }
+  };
+
   const handleProceed = async () => {
-  if (!selectedFile) return;
-  setLoading(true);
+    if (!selectedFile) return;
+    setLoading(true);
+    setShowSteps(true);
 
-  try {
-    const text = await extractTextFromPDF(selectedFile);
+    try {
+      // Step 0: Analyzing your uploaded resume
+      setCurrentStep(0);
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
-    if (!text || text.trim().length === 0) {
-      console.log("⚠️ Empty file detected");
-      alert("❌ The uploaded file appears to be empty. Please upload a valid resume.");
-      return;
+      // Step 1: Extracting text
+      setCurrentStep(1);
+      let text;
+      if (selectedFile.name.endsWith('.pdf')) {
+        text = await extractTextFromPDF(selectedFile);
+      } else if (selectedFile.name.endsWith('.docx')) {
+        text = await extractTextFromDocx(selectedFile);
+      } else {
+        alert("Unsupported file format.");
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Simulate fixed step time
+
+      if (!text || text.trim().length === 0) {
+        alert("❌ The uploaded file appears to be empty. Please upload a valid resume.");
+        return;
+      }
+
+      if (!isResumeText(text)) {
+        alert("❌ This doesn't look like a resume. Please upload a valid resume file.");
+        return;
+      }
+
+      // Step 2: Sending to server
+      setCurrentStep(2);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch('http://127.0.0.1:8000/parse_resume', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        alert("❌ Server error while processing the resume.");
+        return;
+      }
+
+      const data = await response.json();
+      if (!data || typeof data !== "object") {
+        alert("❌ Received invalid response from the server.");
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 8000));
+
+      // Step 3: Finalizing
+      setCurrentStep(3);
+      await new Promise(resolve => setTimeout(resolve, 12000));
+
+      // Navigate to resume builder
+      navigate('/resume-builder', { state: { parsedData: data } });
+
+    } catch (error) {
+      alert("❌ Something went wrong during file validation or upload.");
+      console.log(error)
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (!isResumeText(text)) {
-      console.log("⚠️ Non-resume file detected");
-      alert("❌ This doesn't look like a resume. Please upload a valid resume file.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
-    const response = await fetch('http://127.0.0.1:8000/parse_resume', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Server Error:", errorText);
-      alert("❌ Server error while processing the resume.");
-      return;
-    }
-
-    const data = await response.json();
-    if (!data || typeof data !== "object") {
-      alert("❌ Received invalid response from the server.");
-      return;
-    }
-
-    navigate('/resume-builder', { state: { parsedData: data } });
-
-  } catch (error) {
-    console.error("Unhandled Error:", error);
-    alert("❌ Something went wrong during file validation or upload.");
-  } finally {
-    setLoading(false);
-  }
-};
 
 
   return (
@@ -167,15 +213,48 @@ const ResumeUpload = () => {
                 style={{ marginTop: 24, backgroundColor: "#1d3f77" }}
                 size="large"
                 onClick={handleProceed}
-                loading={loading}
               >
                 Proceed
               </Button>
+
+              {showSteps && (
+                <>
+                  <br />
+                  <br />
+                  {stepItems.map((step, index) => (
+                    <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          backgroundColor: currentStep > index ? '#52c41a' : currentStep === index ? '#1890ff' : '#d9d9d9',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 14,
+                          marginRight: 12,
+                        }}
+                      >
+                        {currentStep === index ? (
+                          <Spin size="small" style={{ color: '#fff' }} />
+                        ) : currentStep > index ? (
+                          '✓'
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+                      <span>{step.title}</span>
+                    </div>
+                  ))}
+                </>
+              )}
             </>
           )}
-        </Card>
-      </Content>
-    </Layout>
+      </Card>
+    </Content>
+    </Layout >
   );
 };
 

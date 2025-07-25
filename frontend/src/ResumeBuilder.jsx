@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRef } from 'react';
-import { Input, Button, Card, Row, Col, Divider, Form, Typography, Tag, Avatar, Progress, Layout, Rate } from 'antd';
+import { Input, Button, Card, Row, Col, Divider, Form, Typography, Tag, Avatar, Layout } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -8,9 +8,11 @@ import { useNavigate } from 'react-router-dom';
 import html2pdf from 'html2pdf.js';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import SemiCircularScore from './circularScore';
 
 const { Title, Text } = Typography;
-const { Header, Content } = Layout;
+const { Header } = Layout;
+
 
 const ResumeBuilder = () => {
   const [formData, setFormData] = useState({
@@ -26,6 +28,7 @@ const ResumeBuilder = () => {
     projects: [],
     skills: [],
     certifications: [],
+    awards: []
   });
 
   const location = useLocation();
@@ -38,7 +41,8 @@ const ResumeBuilder = () => {
       const parsed = location.state.parsedData;
 
       console.log("Mapping Parsed Data:", parsed);
-
+      console.log("Projects Array in parsed data:", parsed.projects);
+      console.log("Education parsed:", parsed.education);
 
       setFormData({
         name: parsed.full_name || '',
@@ -50,24 +54,54 @@ const ResumeBuilder = () => {
         github: parsed.github_portfolio || '',
         certifications: parsed.certifications ? parsed.certifications.split(',').map(c => c.trim()) : [],
         skills: parsed.skills ? parsed.skills.split(',').map(s => s.trim()) : [],
-        education: parsed.education ? [{
-          school: parsed.education, degree: '', gpa: '', date: '', info: ''
-        }] : [],
-        work: Array.isArray(parsed.work_experience) ? parsed.work_experience.map(w => ({
-          company: w.company_name || '',
-          title: w.role_name || '',
-          date: w.project_duration || '',
-          description: w.project_description || ''
-        })) : [],
-        projects: []  // Keep it empty for now
+        awards: Array.isArray(parsed.awards) ? parsed.awards : [],
+        education: Array.isArray(parsed.education)
+          ? parsed.education.map(e => ({
+            school: e.school || '',
+            degree: e.degree || '',
+            gpa: e.gpa || '',
+            date: e.date || '',
+            info: e.info || ''
+          }))
+          : [],
+        work: Array.isArray(parsed.work_experience)
+          ? parsed.work_experience.map(w => ({
+            company: w.company_name || '',
+            title: w.role_name || '',
+            date: w.project_duration || '',
+            description: w.project_description || ''
+          }))
+          : [],
+        projects: Array.isArray(parsed.projects)
+          ? parsed.projects.map(p => ({
+            name: p.project_name || '',
+            description: p.project_description || ''
+          }))
+          : []
       });
+
+      if (parsed.face_images && parsed.face_images.length > 0) {
+        const faceImageUrls = parsed.face_images.map(imgPath => {
+          const fileName = imgPath.split('\\').pop().split('/').pop();
+          console.log(fileName + "----------------");
+          return `http://localhost:8000/static/face_images/${fileName}`;
+        });
+
+        console.log("Face image URLs:", faceImageUrls);
+        setProfileImage(faceImageUrls[0]);
+      } else {
+        console.log("No valid face image found, using default profile image.");
+        setProfileImage(null);
+      }
     }
   }, [location.state]);
+
 
   const [skillInput, setSkillInput] = useState('');
   const [certInput, setCertInput] = useState('');
   const [score, setScore] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
+  const [awardInput, setAwardInput] = useState('');
   const [showAttachReminder, setShowAttachReminder] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const defaultImage = "user (1).png";
@@ -158,7 +192,7 @@ const ResumeBuilder = () => {
     const body = encodeURIComponent(
       `Hi,
 
-Please find attached resume.
+Please find attached resume of ${formData.name}.
 
 Candidate Summary:
 
@@ -175,6 +209,12 @@ ${stripHtmlTags(formData.summary) || ''}
 Best regards,  
 ${formData.name || ''}`
     );
+
+    setShowAttachReminder(true);
+
+    setTimeout(() => {
+      setShowAttachReminder(false);
+    }, 30000);
 
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -235,7 +275,7 @@ ${formData.name || ''}`
           style={{ color: 'white', fontWeight: 'bold', marginLeft: 'auto' }}
           onClick={() => navigate('/')}
         >
-          Back To Home
+          🏠Home
         </Button>
       </Header>
 
@@ -282,9 +322,12 @@ ${formData.name || ''}`
                   <div style={{ marginTop: 8, textAlign: 'left' }}>
                     <img
                       src={profileImage}
-                      alt="Preview"
-                      style={{ width: 80, height: 80, borderRadius: '50%' }}
+                      alt="Profile"
+                      crossOrigin="anonymous"
+                      onLoad={() => console.log("Image loaded")}
+                      style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '50%' }}
                     />
+
                     <Button
                       danger
                       size="small"
@@ -358,25 +401,25 @@ ${formData.name || ''}`
               </Form.Item>
 
               <Form.Item label={<strong>Summary</strong>}>
-  <ReactQuill
-    value={formData.summary}
-    onChange={(value) => setFormData({ ...formData, summary: value })}
-    modules={{
-      toolbar: [
-        [{ header: [1, 2, false] }],
-        ['bold', 'italic', 'underline'],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['clean'],
-      ],
-    }}
-    formats={[
-      'header', 'bold', 'italic', 'underline',
-      'list', 'bullet',
-    ]}
-    theme="snow"
-    placeholder="Brief professional summary"
-  />
-</Form.Item>
+                <ReactQuill
+                  value={formData.summary}
+                  onChange={(value) => setFormData({ ...formData, summary: value })}
+                  modules={{
+                    toolbar: [
+                      [{ header: [1, 2, false] }],
+                      ['bold', 'italic', 'underline'],
+                      [{ list: 'ordered' }, { list: 'bullet' }],
+                      ['clean'],
+                    ],
+                  }}
+                  formats={[
+                    'header', 'bold', 'italic', 'underline',
+                    'list', 'bullet',
+                  ]}
+                  theme="snow"
+                  placeholder="Brief professional summary"
+                />
+              </Form.Item>
 
 
               <Divider orientation="left">Certifications</Divider>
@@ -396,6 +439,34 @@ ${formData.name || ''}`
                 Add Certification
               </Button>
               <div style={{ marginTop: 8 }}>{formData.certifications.map((cert, i) => <Tag closable key={i} onClose={() => removeTag('certifications', cert)}>{cert}</Tag>)}</div>
+
+              <Divider orientation="left">Awards</Divider>
+              <Input
+                value={awardInput}
+                onChange={(e) => setAwardInput(e.target.value)}
+                placeholder="Add Award"
+                onPressEnter={() => addTag('awards', setAwardInput, awardInput)}
+              />
+              <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                block
+                onClick={() => addTag('awards', setAwardInput, awardInput)}
+                style={{ marginTop: 8 }}
+              >
+                Add Award
+              </Button>
+              <div style={{ marginTop: 8 }}>
+                {formData.awards.map((award, i) => (
+                  <Tag
+                    closable
+                    key={i}
+                    onClose={() => removeTag('awards', award)}
+                  >
+                    {award}
+                  </Tag>
+                ))}
+              </div>
 
               <Divider orientation="left">Professional Skills</Divider>
               <Input
@@ -580,7 +651,14 @@ ${formData.name || ''}`
           >
             <div style={{ flex: 1 }}>
 
-              <div style={{ position: 'relative', height: 250, overflow: 'hidden' }}>
+              <div
+                style={{
+                  position: 'relative',
+                  minHeight: 210,
+                  height: formData.email || formData.phone || formData.linkedin || formData.github ? 'auto' : 180,
+                  overflow: 'hidden'
+                }}
+              >
                 <svg
                   viewBox="0 0 1000 220"
                   preserveAspectRatio="none"
@@ -616,7 +694,7 @@ ${formData.name || ''}`
                       zIndex: 2
                     }}
                   >
-                    <img src="/logo-incedo.png" alt="Incedo Logo" style={{ width: 100, marginBottom: 40 }} />
+                    <img src="/logo-incedo.png" alt="Incedo Logo" style={{ width: 100, marginBottom: 20 }} />
                     <Avatar size={120} src={profileImage || defaultImage} />
                   </div>
 
@@ -673,35 +751,58 @@ ${formData.name || ''}`
                   {formData.skills?.length > 0 && (
                     <>
                       <Title level={5}>🛠 PROFESSIONAL SKILLS:</Title>
-                      <ul>{formData.skills.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                      <ul style={{ paddingLeft: '20px', marginBottom: 12 }}>
+                        {formData.skills.map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
                     </>
                   )}
 
-                  {/* Education */}
                   {formData.education?.length > 0 && (
                     <>
                       <Title level={5}>🎓 EDUCATION:</Title>
                       {formData.education.map((e, i) => (
                         <div key={i} style={{ marginBottom: 12 }}>
-                          <Text strong>{e.school}</Text><br />
+                          {e.school && <Text strong>{e.school}</Text>}
+                          {(e.degree || e.gpa || e.date) && (
+                            <div>
+                              {e.degree && <Text>{e.degree}</Text>}
+                              {e.gpa && <> | <Text>GPA: {e.gpa}</Text></>}
+                              {e.date && <> | <Text>{e.date}</Text></>}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </>
                   )}
 
+
                   {formData.certifications?.length > 0 && (
                     <>
                       <Title level={5}>📄 CERTIFICATIONS:</Title>
-                      <ul>{formData.certifications.map((c, i) => <li key={i}>{c}</li>)}</ul>
+                      <ul style={{ paddingLeft: '20px' }}>
+                        {formData.certifications.map((c, i) => <li key={i}>{c}</li>)}
+                      </ul>
                     </>
                   )}
+
+                  {formData.awards?.length > 0 && (
+                    <>
+                      <Title level={5}>🏆 AWARDS:</Title>
+                      <ul style={{ paddingLeft: '20px' }}>
+                        {formData.awards.map((a, i) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </>
+                  )}
+
                 </div>
 
                 <div style={{ width: '60%', padding: '24px' }}>
 
                   {formData.summary && (
                     <>
-                      <Title level={5} style={{ borderBottom: '1px solid #ccc' }}>🧾 SUMMARY:</Title>
+                      <Title level={5}>🧾 SUMMARY:</Title>
                       <div dangerouslySetInnerHTML={{ __html: formData.summary }} />
                     </>
                   )}
@@ -709,7 +810,7 @@ ${formData.name || ''}`
                   {/* Work Experience */}
                   {formData.work?.length > 0 && (
                     <>
-                      <Title level={5} style={{ borderBottom: '1px solid #ccc' }}>🩹 WORK EXPERIENCE:</Title>
+                      <Title level={5}>🩹 WORK EXPERIENCE:</Title>
                       {formData.work.map((w, i) => (
                         <div key={i} style={{ marginBottom: 16 }}>
                           <Text strong>{w.company?.toUpperCase()}</Text> - {w.title?.toUpperCase()}<br />
@@ -722,7 +823,7 @@ ${formData.name || ''}`
 
                   {formData.projects?.length > 0 && (
                     <>
-                      <Title level={5} style={{ borderBottom: '1px solid #ccc' }}>📌 PROJECTS:</Title>
+                      <Title level={5}>📌 PROJECTS:</Title>
                       {formData.projects.map((p, i) => (
                         <div key={i} style={{ marginBottom: 16 }}>
                           <Text strong>{p.name}</Text>
@@ -776,7 +877,7 @@ ${formData.name || ''}`
                 onClick={calculateScore}
                 style={{ marginRight: 12, backgroundColor: "#1d3f77" }}
               >
-                Check Score
+                Resume Rating
               </Button>
 
               {showAttachReminder && (
@@ -788,30 +889,10 @@ ${formData.name || ''}`
               )}
 
               {score !== null && (
-                <div style={{ marginTop: 24 }}>
+                <div style={{ marginTop: 24, textAlign: 'center' }}>
                   <Typography.Text strong>Resume Score: {score}/100</Typography.Text>
-                  <Progress
-                    percent={score}
-                    status="active"
-                    strokeColor={
-                      score < 50
-                        ? '#f5222d'
-                        : score < 70
-                          ? '#fa8c16'
-                          : score < 85
-                            ? '#52c41a'
-                            : '#237804'
-                    }
-                  />
-
-                  {/* ⭐ Star Rating Representation */}
-                  <div style={{ marginTop: 8 }}>
-                    <Typography.Text>Rating:</Typography.Text>
-                    <Rate
-                      disabled
-                      allowHalf
-                      value={Math.round(score / 20 * 2) / 2} // Convert score to 0–5 scale with half-stars
-                    />
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+                    <SemiCircularScore score={score} />
                   </div>
                 </div>
               )}
@@ -823,41 +904,40 @@ ${formData.name || ''}`
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 12,
-                    backgroundColor: '#f4f7fe',
-                    borderRadius: 16,
+                    backgroundColor: '#ffffff',
+                    borderRadius: 12,
                     padding: 24,
-                    border: '1px solid #dbeafe',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                    border: '1px solid #e4eaf2',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
                   }}
                 >
-                  {/* 🤖 AI Avatar */}
                   <Avatar
                     size={48}
                     style={{
-                      backgroundColor: '#e0f0ff',
-                      color: '#1d3f77',
+                      backgroundColor: '#fffbe6',
+                      color: '#faad14',
                       fontSize: 24,
                     }}
                   >
-                    🧠
+                    💡
                   </Avatar>
 
                   <div style={{ flex: 1 }}>
                     <Title level={5} style={{ marginBottom: 12, color: '#1d3f77' }}>
-                      Smart Suggestions to Improve Your Resume
+                      Incedo Smart Suggestions to Improve Your Resume
                     </Title>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {suggestions.map((tip, index) => (
                         <div
                           key={index}
                           style={{
-                            background: '#ffffff',
+                            background: '#fafafa',
                             borderRadius: 10,
                             padding: '12px 16px',
                             border: '1px solid #e4eaf2',
                             fontSize: 14,
                             color: '#333',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                           }}
                         >
                           {tip}
