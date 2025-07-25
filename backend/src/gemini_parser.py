@@ -38,6 +38,7 @@ Extract these exact fields:
 - certifications: Combine all certifications into one comma-separated string.
 - designation: Current or most recent job title.
 - projects: Summarized projects and descriptions as per below json structure.
+- awards_recognitions: List of awards, achievements, scholarships, or honors received.
 Return only the JSON object, in a single line, with no formatting, no extra explanation, and no markdown wrappers.
 JSON structure:
 {{
@@ -68,12 +69,15 @@ JSON structure:
             "role_name": "",
             "technologies": ""
         }}
-    ],
+    ]
     "projects": [
         {{
             "project_name":"",
             "project_description":""
         }}
+    ],
+    "awards": [
+        ""
     ]
 }}
 
@@ -120,7 +124,6 @@ def parse_resume_with_gemini(file_path):
     result["face_images"] = face_images
     return result
 
-
 def extract_face_from_pdf(pdf_path, output_dir="static/face_images"):
     os.makedirs(output_dir, exist_ok=True)
     image_paths = []
@@ -129,32 +132,37 @@ def extract_face_from_pdf(pdf_path, output_dir="static/face_images"):
         print("face_recognition not installed.")
         return ["default_face.jpg"]
 
-    doc = fitz.open(pdf_path)
-    page = doc.load_page(0)
-    pix = page.get_pixmap(dpi=500)
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    img_np = np.array(img)
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[0]
+        img_bytes = page.to_image(resolution=300).original.convert("RGB")
 
-    face_locations = face_recognition.face_locations(img_np)
-    print(f"Detected faces: {len(face_locations)}")
+        img_np = np.array(img_bytes)
+        face_locations = face_recognition.face_locations(img_np)
 
-    for i, (top, right, bottom, left) in enumerate(face_locations):
-        # Add padding around face
-        extended_top = max(top - 20, 0)
-        extended_bottom = min(bottom + int((bottom - top) * 0.25), img_np.shape[0])
-        extended_left = max(left - 20, 0)
-        extended_right = min(right + 20, img_np.shape[1])
+        if not face_locations:
+            print("No face detected.")
+            return []
 
-        # Crop face from image
-        face = img_np[extended_top:extended_bottom, extended_left:extended_right]
+        for i, (top, right, bottom, left) in enumerate(face_locations):
+            face_height = bottom - top
+            face_width = right - left
 
-        # Save face directly without additional zooming
-        face_image_path = os.path.join(output_dir, f"FaceImage_face{i+1}.jpg")
-        cv2.imwrite(face_image_path, cv2.cvtColor(face, cv2.COLOR_RGB2BGR))
-        image_paths.append(f"/static/face_images/FaceImage_face{i+1}.jpg")
-        print(f"Saved face image: {face_image_path}")
+            padding_vertical = int(face_height * 0.5)
+            padding_horizontal = int(face_width * 0.5)
+
+            extended_top = max(top - padding_vertical, 0)
+            extended_bottom = min(bottom + padding_vertical, img_np.shape[0])
+            extended_left = max(left - padding_horizontal, 0)
+            extended_right = min(right + padding_horizontal, img_np.shape[1])
+
+            face_img = img_bytes.crop((extended_left, extended_top, extended_right, extended_bottom))
+            output_file = os.path.join(output_dir, f"FaceImage_face{i+1}.png")
+            face_img.save(output_file)
+            image_paths.append(output_file)
+            print(f"Saved: {output_file}")
 
     return image_paths
+
 
 
 if __name__ == "__main__":

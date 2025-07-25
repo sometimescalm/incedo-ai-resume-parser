@@ -28,6 +28,7 @@ const ResumeBuilder = () => {
     projects: [],
     skills: [],
     certifications: [],
+    awards: []
   });
 
   const location = useLocation();
@@ -53,6 +54,7 @@ const ResumeBuilder = () => {
         github: parsed.github_portfolio || '',
         certifications: parsed.certifications ? parsed.certifications.split(',').map(c => c.trim()) : [],
         skills: parsed.skills ? parsed.skills.split(',').map(s => s.trim()) : [],
+        awards: Array.isArray(parsed.awards) ? parsed.awards : [],
         education: Array.isArray(parsed.education)
           ? parsed.education.map(e => ({
             school: e.school || '',
@@ -99,6 +101,7 @@ const ResumeBuilder = () => {
   const [certInput, setCertInput] = useState('');
   const [score, setScore] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
+  const [awardInput, setAwardInput] = useState('');
   const [showAttachReminder, setShowAttachReminder] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const defaultImage = "user (1).png";
@@ -437,6 +440,34 @@ ${formData.name || ''}`
               </Button>
               <div style={{ marginTop: 8 }}>{formData.certifications.map((cert, i) => <Tag closable key={i} onClose={() => removeTag('certifications', cert)}>{cert}</Tag>)}</div>
 
+              <Divider orientation="left">Awards</Divider>
+              <Input
+                value={awardInput}
+                onChange={(e) => setAwardInput(e.target.value)}
+                placeholder="Add Award"
+                onPressEnter={() => addTag('awards', setAwardInput, awardInput)}
+              />
+              <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                block
+                onClick={() => addTag('awards', setAwardInput, awardInput)}
+                style={{ marginTop: 8 }}
+              >
+                Add Award
+              </Button>
+              <div style={{ marginTop: 8 }}>
+                {formData.awards.map((award, i) => (
+                  <Tag
+                    closable
+                    key={i}
+                    onClose={() => removeTag('awards', award)}
+                  >
+                    {award}
+                  </Tag>
+                ))}
+              </div>
+
               <Divider orientation="left">Professional Skills</Divider>
               <Input
                 value={skillInput}
@@ -623,7 +654,7 @@ ${formData.name || ''}`
               <div
                 style={{
                   position: 'relative',
-                  minHeight: 260,
+                  minHeight: 210,
                   height: formData.email || formData.phone || formData.linkedin || formData.github ? 'auto' : 180,
                   overflow: 'hidden'
                 }}
@@ -663,7 +694,7 @@ ${formData.name || ''}`
                       zIndex: 2
                     }}
                   >
-                    <img src="/logo-incedo.png" alt="Incedo Logo" style={{ width: 100, marginBottom: 40 }} />
+                    <img src="/logo-incedo.png" alt="Incedo Logo" style={{ width: 100, marginBottom: 20 }} />
                     <Avatar size={120} src={profileImage || defaultImage} />
                   </div>
 
@@ -755,6 +786,16 @@ ${formData.name || ''}`
                       </ul>
                     </>
                   )}
+
+                  {formData.awards?.length > 0 && (
+                    <>
+                      <Title level={5}>🏆 AWARDS:</Title>
+                      <ul style={{ paddingLeft: '20px' }}>
+                        {formData.awards.map((a, i) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </>
+                  )}
+
                 </div>
 
                 <div style={{ width: '60%', padding: '24px' }}>
