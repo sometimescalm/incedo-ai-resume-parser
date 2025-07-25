@@ -102,7 +102,7 @@ def extract_text(file_path):
 
 
 def parse_resume_with_gemini(file_path):
-    genai.configure(api_key="AIzaSyBZbKeZYnMy-BlDCycaNGrJHfq1KwoGXiY")
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     model = genai.GenerativeModel('gemini-2.5-flash')
 
     resume_text = extract_text(file_path)
@@ -110,9 +110,6 @@ def parse_resume_with_gemini(file_path):
     response = model.generate_content(prompt)
 
     print("Response from Gemini:", response.text)
-    # print(response.text)
-    #response.raise_for_status()
-    
     result = response.text.strip()
     result = json.loads(result)
 
@@ -167,5 +164,6 @@ def extract_face_from_pdf(pdf_path, output_dir="static/face_images"):
 
 if __name__ == "__main__":
     file_path = "Shubham_Wadkar_Resume.pdf"
+    # Parse resume
     parsed = parse_resume_with_gemini(file_path)
     print(json.dumps(parsed, indent=2))
