@@ -3,9 +3,7 @@ import docx2txt
 import os
 import json
 import google.generativeai as genai
-import fitz
 from PIL import Image
-import cv2
 import numpy as np
 
 try:
@@ -109,7 +107,6 @@ def parse_resume_with_gemini(file_path):
     prompt = PROMPT_TEMPLATE.format(resume_text=resume_text)
     response = model.generate_content(prompt)
 
-    print("Response from Gemini:", response.text)
     result = response.text.strip()
     result = json.loads(result)
 

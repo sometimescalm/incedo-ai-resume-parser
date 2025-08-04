@@ -12,3 +12,5 @@ pandas
 openpyxl
 python-dotenv
 numpy
+dlib
+face_recognition
