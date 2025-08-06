@@ -105,8 +105,6 @@ const ResumeBuilder = () => {
     }
   }, [formData]);
 
-
-
   const [skillInput, setSkillInput] = useState('');
   const [certInput, setCertInput] = useState('');
   const [score, setScore] = useState(null);
@@ -116,6 +114,7 @@ const ResumeBuilder = () => {
   const [profileImage, setProfileImage] = useState(null);
   const defaultImage = "user (1).png";
   const fileInputRef = useRef(null);
+  const [showScoreSection, setShowScoreSection] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -230,50 +229,84 @@ ${formData.name || ''}`
   };
 
   const calculateScore = () => {
-    let total = 0;
-    let tips = [];
+    let score = 0;
+    const tips = [];
 
-    if (formData.name) total += 10;
-    else tips.push("Add your full name.");
-
-    if (formData.title) total += 10;
-    else tips.push("Include a designation/job title.");
-
-    if (formData.summary) {
-      total += 10;
-      if (formData.summary.length >= 250) total += 10;
-      else tips.push("Expand your summary to at least 250 characters.");
+    if (formData.summary && formData.summary.length >= 250) {
+      score += 20;
+    } else if (formData.summary) {
+      score += 10;
+      tips.push('Expand your professional summary to at least 250 characters to make it more impactful.');
     } else {
-      tips.push("Add a professional summary.");
+      tips.push('Add a compelling professional summary to quickly convey your strengths.');
     }
 
-    const skillsCount = formData.skills.length;
-    if (skillsCount >= 5) total += 15;
-    else if (skillsCount > 0) {
-      total += 8;
-      tips.push("Include at least 5 professional skills for full score.");
+    if (formData.skills && formData.skills.length >= 6) {
+      score += 20;
+    } else if (formData.skills && formData.skills.length >= 3) {
+      score += 10;
+      tips.push('Add more relevant skills (6+) to showcase your expertise.');
     } else {
-      tips.push("Add at least 5 professional skills.");
+      tips.push('Include at least 6 technical and soft skills relevant to your role.');
     }
 
-    if (formData.certifications.length >= 2) total += 10;
-    else tips.push("Mention at least 2 certifications.");
+    if (formData.work && formData.work.length > 0) {
+      const strongExp = formData.work.filter(
+        (exp) => exp.description && exp.description.length >= 200
+      );
+      if (strongExp.length > 0) {
+        score += 20;
+      } else {
+        score += 10;
+        tips.push('Make sure your work experience descriptions are detailed (200+ characters).');
+      }
+    } else {
+      tips.push('Add at least one relevant work experience with detailed descriptions.');
+    }
 
-    if (formData.education.length > 0) total += 10;
-    else tips.push("Add your education background.");
+    if (formData.education && formData.education.length > 0) {
+      score += 15;
+    } else {
+      tips.push('Include your education background to establish your qualifications.');
+    }
 
-    const workExperienceValid = formData.work.some(
-      (w) => w.description && w.description.length > 100
-    );
-    if (workExperienceValid) total += 20;
-    else tips.push("Add at least one work experience with a detailed description (100+ characters).");
+    if (formData.projects && formData.projects.length > 0) {
+      const strongProjects = formData.projects.filter(
+        (proj) => proj.description && proj.description.length >= 150
+      );
+      if (strongProjects.length > 0) {
+        score += 15;
+      } else {
+        score += 8;
+        tips.push('Add more detailed project descriptions to reflect your technical abilities.');
+      }
+    } else {
+      tips.push('Include at least one strong project with detailed explanation.');
+    }
 
-    if (profileImage) total += 5;
-    else tips.push("Upload a profile picture.");
+    if (formData.certifications && formData.certifications.length > 0) {
+      score += 5;
+    } else {
+      tips.push('Add certifications to highlight your continuous learning and expertise.');
+    }
 
-    setScore(total);
+    if (formData.work && formData.work.length > 0) {
+      const hasCompanies = formData.work.some((exp) => exp.company && exp.company.trim() !== '');
+      if (hasCompanies) {
+        score += 5;
+      } else {
+        tips.push('Include the names of your previous organizations to add credibility.');
+      }
+    } else {
+      tips.push('List your previous organizations to showcase your work history.');
+    }
+
+    score = Math.min(score, 100);
+
+    setScore(score);
     setSuggestions(tips);
-    return total;
+
+    return score;
   };
 
 
@@ -377,45 +410,45 @@ ${formData.name || ''}`
                   />
                 </Form.Item>
                 <Form.Item label={<strong>Email</strong>}>
-                <Input
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="e.g. user@example.com"
-                  size="large"
-                  disabled
-                />
-              </Form.Item>
-              <Form.Item label={<strong>Phone</strong>}>
-                <Input
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="e.g. +91-1234567890"
-                  size="large"
-                  disabled
-                />
-              </Form.Item>
-              <Form.Item label={<strong>LinkedIn</strong>}>
-                <Input
-                  name="linkedin"
-                  value={formData.linkedin}
-                  onChange={handleChange}
-                  placeholder="LinkedIn URL"
-                  size="large"
-                  disabled
-                />
-              </Form.Item>
-              <Form.Item label={<strong>GitHub</strong>}>
-                <Input
-                  name="github"
-                  value={formData.github}
-                  onChange={handleChange}
-                  placeholder="GitHub URL"
-                  size="large"
-                  disabled
-                />
-              </Form.Item>
+                  <Input
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="e.g. user@example.com"
+                    size="large"
+                    disabled
+                  />
+                </Form.Item>
+                <Form.Item label={<strong>Phone</strong>}>
+                  <Input
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="e.g. +91-1234567890"
+                    size="large"
+                    disabled
+                  />
+                </Form.Item>
+                <Form.Item label={<strong>LinkedIn</strong>}>
+                  <Input
+                    name="linkedin"
+                    value={formData.linkedin}
+                    onChange={handleChange}
+                    placeholder="LinkedIn URL"
+                    size="large"
+                    disabled
+                  />
+                </Form.Item>
+                <Form.Item label={<strong>GitHub</strong>}>
+                  <Input
+                    name="github"
+                    value={formData.github}
+                    onChange={handleChange}
+                    placeholder="GitHub URL"
+                    size="large"
+                    disabled
+                  />
+                </Form.Item>
 
                 <Form.Item label={<strong>Summary</strong>}>
                   <ReactQuill
@@ -653,6 +686,27 @@ ${formData.name || ''}`
           </Col>
 
           <Col span={12}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                justifyContent: 'flex-end',
+                height: '58px',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                paddingRight: '16px',
+                backgroundColor: 'white',
+                borderBottomLeftRadius: 0,
+                borderBottomRightRadius: 0,
+                borderTopLeftRadius: '12px',
+                borderTopRightRadius: '12px',
+                borderBottom: '1px solid #f5f5f5'
+              }}
+            >
+              <Rate disabled value={resumeScore} />
+            </div>
+
+
             <Card
               id="resume-preview"
               bordered={false}
@@ -660,17 +714,16 @@ ${formData.name || ''}`
                 minHeight: '90vh',
                 background: '#fff',
                 padding: 0,
-                borderRadius: '12px',
+                borderBottomLeftRadius: '12px',
+                borderBottomRightRadius: '12px',
+                borderTopLeftRadius: 0,
+                borderTopRightRadius: 0,
                 overflow: 'hidden',
                 fontFamily: 'Segoe UI, sans-serif',
                 display: 'flex',
                 flexDirection: 'column'
               }}
-              title={
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Rate disabled value={resumeScore} />
-                </div>
-              }
+
             >
               <div style={{ flex: 1 }}>
 
@@ -803,7 +856,7 @@ ${formData.name || ''}`
 
                     {formData.certifications?.length > 0 && (
                       <>
-                        <Title level={5}>📄 CERTIFICATIONS:</Title>
+                        <Title level={5}>🎖️ CERTIFICATIONS:</Title>
                         <ul style={{ paddingLeft: '20px' }}>
                           {formData.certifications.map((c, i) => <li key={i}>{c}</li>)}
                         </ul>
@@ -897,7 +950,10 @@ ${formData.name || ''}`
               </Button>
               <Button
                 type="primary"
-                onClick={calculateScore}
+                onClick={() => {
+                  const total = calculateScore();
+                  setShowScoreSection(true);
+                }}
                 style={{ marginRight: 12, backgroundColor: "#1d3f77" }}
               >
                 Resume Rating
@@ -911,7 +967,7 @@ ${formData.name || ''}`
                 </div>
               )}
 
-              {score !== null && (
+              {showScoreSection && score !== null && (
                 <div style={{ marginTop: 24, textAlign: 'center' }}>
                   <Typography.Text strong>Resume Score: {score}/100</Typography.Text>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
@@ -920,7 +976,7 @@ ${formData.name || ''}`
                 </div>
               )}
 
-              {suggestions.length > 0 && (
+              {showScoreSection && suggestions.length > 0 && (
                 <div
                   style={{
                     marginTop: 32,
