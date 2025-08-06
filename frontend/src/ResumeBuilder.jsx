@@ -305,7 +305,6 @@ ${formData.name || ''}`
 
     setScore(score);
     setSuggestions(tips);
-
     return score;
   };
 
@@ -449,7 +448,6 @@ ${formData.name || ''}`
                     disabled
                   />
                 </Form.Item>
-
                 <Form.Item label={<strong>Summary</strong>}>
                   <ReactQuill
                     value={formData.summary}
@@ -705,8 +703,6 @@ ${formData.name || ''}`
             >
               <Rate disabled value={resumeScore} />
             </div>
-
-
             <Card
               id="resume-preview"
               bordered={false}
@@ -723,7 +719,6 @@ ${formData.name || ''}`
                 display: 'flex',
                 flexDirection: 'column'
               }}
-
             >
               <div style={{ flex: 1 }}>
 
