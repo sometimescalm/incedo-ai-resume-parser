@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRef } from 'react';
-import { Input, Button, Card, Row, Col, Divider, Form, Typography, Tag, Avatar, Layout } from 'antd';
+import { Input, Button, Card, Row, Col, Divider, Form, Typography, Tag, Avatar, Layout, Rate } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -33,6 +33,7 @@ const ResumeBuilder = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const [resumeScore, setResumeScore] = useState(0);
 
 
   useEffect(() => {
@@ -95,6 +96,15 @@ const ResumeBuilder = () => {
       }
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (formData) {
+      const score = calculateScore(formData);
+      const finScore = (score / 100) * 5;
+      setResumeScore(finScore);
+    }
+  }, [formData]);
+
 
 
   const [skillInput, setSkillInput] = useState('');
@@ -263,7 +273,9 @@ ${formData.name || ''}`
 
     setScore(total);
     setSuggestions(tips);
+    return total;
   };
+
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -281,95 +293,97 @@ ${formData.name || ''}`
 
       <Layout.Content style={{ padding: 24, background: '#f0f2f5' }}>
         <Row gutter={16}>
-          <Col span={12}><Card
-            title={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <Button
-                  type="link"
-                  icon={<span style={{ fontSize: '16px' }}>←</span>}
-                  onClick={() => navigate('/upload')}
-                  style={{
-                    padding: 0,
-                    color: '#1d3f77',
-                    fontWeight: 'bold',
-                    fontSize: 16,
-                  }}
-                >
-                  Back
-                </Button>
-              </div>
-            }
-            bordered={false}
-            style={{ borderRadius: '12px', background: '#ffffff', padding: '24px' }}
-          >
+          <Col span={12}>
+            <Card
+              title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <Button
+                    type="link"
+                    icon={<span style={{ fontSize: '16px' }}>←</span>}
+                    onClick={() => navigate('/upload')}
+                    style={{
+                      padding: 0,
+                      color: '#1d3f77',
+                      fontWeight: 'bold',
+                      fontSize: 16,
+                    }}
+                  >
+                    Back
+                  </Button>
+                </div>
+              }
+              bordered={false}
+              style={{ borderRadius: '12px', background: '#ffffff', padding: 0 }}
+            >
 
-            <Form layout="vertical">
-              <Form.Item label={<strong>Upload Profile Picture</strong>}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => setProfileImage(reader.result);
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                />
-                {profileImage && (
-                  <div style={{ marginTop: 8, textAlign: 'left' }}>
-                    <img
-                      src={profileImage}
-                      alt="Profile"
-                      crossOrigin="anonymous"
-                      onLoad={() => console.log("Image loaded")}
-                      style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '50%' }}
-                    />
+              <Form layout="vertical">
+                <Form.Item label={<strong>Upload Profile Picture</strong>}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => setProfileImage(reader.result);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  {profileImage && (
+                    <div style={{ marginTop: 8, textAlign: 'left' }}>
+                      <img
+                        src={profileImage}
+                        alt="Profile"
+                        crossOrigin="anonymous"
+                        onLoad={() => console.log("Image loaded")}
+                        style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '50%' }}
+                      />
 
-                    <Button
-                      danger
-                      size="small"
-                      style={{ marginTop: 8, display: 'block' }}
-                      onClick={() => {
-                        setProfileImage(null);
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = ''; // Reset the input
-                        }
-                      }}
-                    >
-                      Remove Photo
-                    </Button>
-                  </div>
-                )}
-              </Form.Item>
+                      <Button
+                        danger
+                        size="small"
+                        style={{ marginTop: 8, display: 'block' }}
+                        onClick={() => {
+                          setProfileImage(null);
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = ''; // Reset the input
+                          }
+                        }}
+                      >
+                        Remove Photo
+                      </Button>
+                    </div>
+                  )}
+                </Form.Item>
 
-              <Form.Item label={<strong>Full Name</strong>}>
-                <Input
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="e.g. POONAM GUPTA"
-                  size="large"
-                />
-              </Form.Item>
-              <Form.Item label={<strong>Designation</strong>}>
-                <Input
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="e.g. Software Test Automation Engineer"
-                  size="large"
-                />
-              </Form.Item>
-              <Form.Item label={<strong>Email</strong>}>
+                <Form.Item label={<strong>Full Name</strong>}>
+                  <Input
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="e.g. POONAM GUPTA"
+                    size="large"
+                  />
+                </Form.Item>
+                <Form.Item label={<strong>Designation</strong>}>
+                  <Input
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    placeholder="e.g. Software Test Automation Engineer"
+                    size="large"
+                  />
+                </Form.Item>
+                <Form.Item label={<strong>Email</strong>}>
                 <Input
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="e.g. user@example.com"
                   size="large"
+                  disabled
                 />
               </Form.Item>
               <Form.Item label={<strong>Phone</strong>}>
@@ -379,6 +393,7 @@ ${formData.name || ''}`
                   onChange={handleChange}
                   placeholder="e.g. +91-1234567890"
                   size="large"
+                  disabled
                 />
               </Form.Item>
               <Form.Item label={<strong>LinkedIn</strong>}>
@@ -388,6 +403,7 @@ ${formData.name || ''}`
                   onChange={handleChange}
                   placeholder="LinkedIn URL"
                   size="large"
+                  disabled
                 />
               </Form.Item>
               <Form.Item label={<strong>GitHub</strong>}>
@@ -397,327 +413,334 @@ ${formData.name || ''}`
                   onChange={handleChange}
                   placeholder="GitHub URL"
                   size="large"
+                  disabled
                 />
               </Form.Item>
 
-              <Form.Item label={<strong>Summary</strong>}>
-                <ReactQuill
-                  value={formData.summary}
-                  onChange={(value) => setFormData({ ...formData, summary: value })}
-                  modules={{
-                    toolbar: [
-                      [{ header: [1, 2, false] }],
-                      ['bold', 'italic', 'underline'],
-                      [{ list: 'ordered' }, { list: 'bullet' }],
-                      ['clean'],
-                    ],
-                  }}
-                  formats={[
-                    'header', 'bold', 'italic', 'underline',
-                    'list', 'bullet',
-                  ]}
-                  theme="snow"
-                  placeholder="Brief professional summary"
-                />
-              </Form.Item>
-
-
-              <Divider orientation="left">Certifications</Divider>
-              <Input
-                value={certInput}
-                onChange={(e) => setCertInput(e.target.value)}
-                placeholder="Add Certification"
-                onPressEnter={() => addTag('certifications', setCertInput, certInput)}
-              />
-              <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                block
-                onClick={() => addTag('certifications', setCertInput, certInput)}
-                style={{ marginTop: 8 }}
-              >
-                Add Certification
-              </Button>
-              <div style={{ marginTop: 8 }}>{formData.certifications.map((cert, i) => <Tag closable key={i} onClose={() => removeTag('certifications', cert)}>{cert}</Tag>)}</div>
-
-              <Divider orientation="left">Awards</Divider>
-              <Input
-                value={awardInput}
-                onChange={(e) => setAwardInput(e.target.value)}
-                placeholder="Add Award"
-                onPressEnter={() => addTag('awards', setAwardInput, awardInput)}
-              />
-              <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                block
-                onClick={() => addTag('awards', setAwardInput, awardInput)}
-                style={{ marginTop: 8 }}
-              >
-                Add Award
-              </Button>
-              <div style={{ marginTop: 8 }}>
-                {formData.awards.map((award, i) => (
-                  <Tag
-                    closable
-                    key={i}
-                    onClose={() => removeTag('awards', award)}
-                  >
-                    {award}
-                  </Tag>
-                ))}
-              </div>
-
-              <Divider orientation="left">Professional Skills</Divider>
-              <Input
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                onPressEnter={() => addTag('skills', setSkillInput, skillInput)}
-                placeholder="e.g. JavaScript"
-              />
-              <Button
-                onClick={() => addTag('skills', setSkillInput, skillInput)}
-                type="dashed"
-                icon={<PlusOutlined />}
-                block
-                style={{ marginTop: 8 }}
-              >
-                Add Skill
-              </Button>
-              <div style={{ marginTop: 8 }}>{formData.skills.map((s, i) => <Tag closable key={i} onClose={() => removeTag('skills', s)}>{s}</Tag>)}</div>
-
-              <Divider orientation="left">Education</Divider>
-              {formData.education.map((edu, index) => (
-                <Card key={index} size="small" style={{ marginBottom: 16 }} type="inner">
-                  <Input
-                    placeholder="Institution"
-                    value={edu.school}
-                    onChange={(e) => handleNestedChange('education', index, 'school', e.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Input
-                    placeholder="Degree"
-                    value={edu.degree}
-                    onChange={(e) => handleNestedChange('education', index, 'degree', e.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Input
-                    placeholder="GPA"
-                    value={edu.gpa}
-                    onChange={(e) => handleNestedChange('education', index, 'gpa', e.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Input
-                    placeholder="Duration"
-                    value={edu.date}
-                    onChange={(e) => handleNestedChange('education', index, 'date', e.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Input.TextArea
-                    placeholder="Additional Info"
-                    value={edu.info}
-                    onChange={(e) => handleNestedChange('education', index, 'info', e.target.value)}
-                    rows={3}
-                  />
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    block
-                    style={{ marginTop: 8 }}
-                    onClick={() => deleteItem('education', index)}
-                  >
-                    Delete
-                  </Button>
-                </Card>
-              ))}
-              <Button
-                icon={<PlusOutlined />}
-                onClick={() => addItem('education', { school: '', degree: '', gpa: '', date: '', info: '' })}
-                type="dashed"
-                block
-              >
-                Add Education
-              </Button>
-
-              <Divider orientation="left">Projects</Divider>
-              {formData.projects.map((proj, index) => (
-                <Card key={index} size="small" style={{ marginBottom: 16 }} type="inner">
-                  <Input
-                    placeholder="Project Name"
-                    value={proj.name}
-                    onChange={(e) => handleNestedChange('projects', index, 'name', e.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Input.TextArea
-                    placeholder="Description"
-                    value={proj.description}
-                    onChange={(e) => handleNestedChange('projects', index, 'description', e.target.value)}
-                    rows={3}
-                  />
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    block
-                    style={{ marginTop: 8 }}
-                    onClick={() => deleteItem('projects', index)}
-                  >
-                    Delete
-                  </Button>
-                </Card>
-              ))}
-
-              <Button
-                icon={<PlusOutlined />}
-                onClick={() => addItem('projects', { name: '', description: '' })}
-                type="dashed"
-                block
-              >
-                Add Project
-              </Button>
-
-
-              <Divider orientation="left">Work Experience</Divider>
-              {formData.work.map((job, index) => (
-                <Card key={index} size="small" style={{ marginBottom: 16 }} type="inner">
-                  <Input
-                    placeholder="Company"
-                    value={job.company}
-                    onChange={(e) => handleNestedChange('work', index, 'company', e.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Input
-                    placeholder="Role"
-                    value={job.title}
-                    onChange={(e) => handleNestedChange('work', index, 'title', e.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Input
-                    placeholder="Duration"
-                    value={job.date}
-                    onChange={(e) => handleNestedChange('work', index, 'date', e.target.value)}
-                    style={{ marginBottom: 8 }}
-                  />
+                <Form.Item label={<strong>Summary</strong>}>
                   <ReactQuill
-                    value={job.description}
-                    onChange={(value) =>
-                      handleNestedChange('work', index, 'description', value)
-                    }
+                    value={formData.summary}
+                    onChange={(value) => setFormData({ ...formData, summary: value })}
                     modules={{
                       toolbar: [
+                        [{ header: [1, 2, false] }],
                         ['bold', 'italic', 'underline'],
                         [{ list: 'ordered' }, { list: 'bullet' }],
                         ['clean'],
                       ],
                     }}
-                    formats={['bold', 'italic', 'underline', 'list', 'bullet']}
+                    formats={[
+                      'header', 'bold', 'italic', 'underline',
+                      'list', 'bullet',
+                    ]}
                     theme="snow"
+                    placeholder="Brief professional summary"
                   />
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    block
-                    style={{ marginTop: 8 }}
-                    onClick={() => deleteItem('work', index)}
-                  >
-                    Delete
-                  </Button>
-                </Card>
-              ))}
-              <Button
-                icon={<PlusOutlined />}
-                onClick={() => addItem('work', { company: '', title: '', date: '', description: '' })}
-                type="dashed"
-                block
-              >
-                Add Job
-              </Button>
-            </Form>
-          </Card>
+                </Form.Item>
+
+
+                <Divider orientation="left">Certifications</Divider>
+                <Input
+                  value={certInput}
+                  onChange={(e) => setCertInput(e.target.value)}
+                  placeholder="Add Certification"
+                  onPressEnter={() => addTag('certifications', setCertInput, certInput)}
+                />
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  block
+                  onClick={() => addTag('certifications', setCertInput, certInput)}
+                  style={{ marginTop: 8 }}
+                >
+                  Add Certification
+                </Button>
+                <div style={{ marginTop: 8 }}>{formData.certifications.map((cert, i) => <Tag closable key={i} onClose={() => removeTag('certifications', cert)}>{cert}</Tag>)}</div>
+
+                <Divider orientation="left">Awards</Divider>
+                <Input
+                  value={awardInput}
+                  onChange={(e) => setAwardInput(e.target.value)}
+                  placeholder="Add Award"
+                  onPressEnter={() => addTag('awards', setAwardInput, awardInput)}
+                />
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  block
+                  onClick={() => addTag('awards', setAwardInput, awardInput)}
+                  style={{ marginTop: 8 }}
+                >
+                  Add Award
+                </Button>
+                <div style={{ marginTop: 8 }}>
+                  {formData.awards.map((award, i) => (
+                    <Tag
+                      closable
+                      key={i}
+                      onClose={() => removeTag('awards', award)}
+                    >
+                      {award}
+                    </Tag>
+                  ))}
+                </div>
+
+                <Divider orientation="left">Professional Skills</Divider>
+                <Input
+                  value={skillInput}
+                  onChange={(e) => setSkillInput(e.target.value)}
+                  onPressEnter={() => addTag('skills', setSkillInput, skillInput)}
+                  placeholder="e.g. JavaScript"
+                />
+                <Button
+                  onClick={() => addTag('skills', setSkillInput, skillInput)}
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  block
+                  style={{ marginTop: 8 }}
+                >
+                  Add Skill
+                </Button>
+                <div style={{ marginTop: 8 }}>{formData.skills.map((s, i) => <Tag closable key={i} onClose={() => removeTag('skills', s)}>{s}</Tag>)}</div>
+
+                <Divider orientation="left">Education</Divider>
+                {formData.education.map((edu, index) => (
+                  <Card key={index} size="small" style={{ marginBottom: 16 }} type="inner">
+                    <Input
+                      placeholder="Institution"
+                      value={edu.school}
+                      onChange={(e) => handleNestedChange('education', index, 'school', e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Input
+                      placeholder="Degree"
+                      value={edu.degree}
+                      onChange={(e) => handleNestedChange('education', index, 'degree', e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Input
+                      placeholder="GPA"
+                      value={edu.gpa}
+                      onChange={(e) => handleNestedChange('education', index, 'gpa', e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Input
+                      placeholder="Duration"
+                      value={edu.date}
+                      onChange={(e) => handleNestedChange('education', index, 'date', e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Input.TextArea
+                      placeholder="Additional Info"
+                      value={edu.info}
+                      onChange={(e) => handleNestedChange('education', index, 'info', e.target.value)}
+                      rows={3}
+                    />
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      block
+                      style={{ marginTop: 8 }}
+                      onClick={() => deleteItem('education', index)}
+                    >
+                      Delete
+                    </Button>
+                  </Card>
+                ))}
+                <Button
+                  icon={<PlusOutlined />}
+                  onClick={() => addItem('education', { school: '', degree: '', gpa: '', date: '', info: '' })}
+                  type="dashed"
+                  block
+                >
+                  Add Education
+                </Button>
+
+                <Divider orientation="left">Projects</Divider>
+                {formData.projects.map((proj, index) => (
+                  <Card key={index} size="small" style={{ marginBottom: 16 }} type="inner">
+                    <Input
+                      placeholder="Project Name"
+                      value={proj.name}
+                      onChange={(e) => handleNestedChange('projects', index, 'name', e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Input.TextArea
+                      placeholder="Description"
+                      value={proj.description}
+                      onChange={(e) => handleNestedChange('projects', index, 'description', e.target.value)}
+                      rows={3}
+                    />
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      block
+                      style={{ marginTop: 8 }}
+                      onClick={() => deleteItem('projects', index)}
+                    >
+                      Delete
+                    </Button>
+                  </Card>
+                ))}
+
+                <Button
+                  icon={<PlusOutlined />}
+                  onClick={() => addItem('projects', { name: '', description: '' })}
+                  type="dashed"
+                  block
+                >
+                  Add Project
+                </Button>
+
+
+                <Divider orientation="left">Work Experience</Divider>
+                {formData.work.map((job, index) => (
+                  <Card key={index} size="small" style={{ marginBottom: 16 }} type="inner">
+                    <Input
+                      placeholder="Company"
+                      value={job.company}
+                      onChange={(e) => handleNestedChange('work', index, 'company', e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Input
+                      placeholder="Role"
+                      value={job.title}
+                      onChange={(e) => handleNestedChange('work', index, 'title', e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Input
+                      placeholder="Duration"
+                      value={job.date}
+                      onChange={(e) => handleNestedChange('work', index, 'date', e.target.value)}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <ReactQuill
+                      value={job.description}
+                      onChange={(value) =>
+                        handleNestedChange('work', index, 'description', value)
+                      }
+                      modules={{
+                        toolbar: [
+                          ['bold', 'italic', 'underline'],
+                          [{ list: 'ordered' }, { list: 'bullet' }],
+                          ['clean'],
+                        ],
+                      }}
+                      formats={['bold', 'italic', 'underline', 'list', 'bullet']}
+                      theme="snow"
+                    />
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      block
+                      style={{ marginTop: 8 }}
+                      onClick={() => deleteItem('work', index)}
+                    >
+                      Delete
+                    </Button>
+                  </Card>
+                ))}
+                <Button
+                  icon={<PlusOutlined />}
+                  onClick={() => addItem('work', { company: '', title: '', date: '', description: '' })}
+                  type="dashed"
+                  block
+                >
+                  Add Job
+                </Button>
+              </Form>
+            </Card>
           </Col>
 
-          <Col span={12}>        <Card
-            id="resume-preview"
-            bordered={false}
-            style={{
-              minHeight: '90vh',
-              background: '#fff',
-              padding: 0,
-              borderRadius: '12px',
-              overflow: 'hidden',
-              fontFamily: 'Segoe UI, sans-serif',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <div style={{ flex: 1 }}>
-
-              <div
-                style={{
-                  position: 'relative',
-                  minHeight: 210,
-                  height: formData.email || formData.phone || formData.linkedin || formData.github ? 'auto' : 180,
-                  overflow: 'hidden'
-                }}
-              >
-                <svg
-                  viewBox="0 0 1000 220"
-                  preserveAspectRatio="none"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%'
-                  }}
-                >
-                  <polygon points="280,0 1000,0 1000,400 180,400 180,80" fill="#1d3f77" />
-                </svg>
+          <Col span={12}>
+            <Card
+              id="resume-preview"
+              bordered={false}
+              style={{
+                minHeight: '90vh',
+                background: '#fff',
+                padding: 0,
+                borderRadius: '12px',
+                overflow: 'hidden',
+                fontFamily: 'Segoe UI, sans-serif',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+              title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Rate disabled value={resumeScore} />
+                </div>
+              }
+            >
+              <div style={{ flex: 1 }}>
 
                 <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
                     position: 'relative',
-                    zIndex: 1,
-                    padding: '24px 40px',
-                    color: '#fff'
+                    minHeight: 180,
+                    height: formData.email || formData.phone || formData.linkedin || formData.github ? 'auto' : 180,
+                    overflow: 'hidden'
                   }}
                 >
-                  <div
+                  <svg
+                    viewBox="0 0 1000 220"
+                    preserveAspectRatio="none"
                     style={{
                       position: 'absolute',
-                      left: 10,
-                      top: 24,
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%'
+                    }}
+                  >
+                    <polygon points="280,0 1000,0 1000,400 180,400 180,80" fill="#1d3f77" />
+                  </svg>
+
+                  <div
+                    style={{
                       display: 'flex',
-                      flexDirection: 'column',
                       alignItems: 'center',
-                      zIndex: 2
+                      position: 'relative',
+                      zIndex: 1,
+                      padding: '24px 40px',
+                      color: '#fff'
                     }}
                   >
-                    <img src="/logo-incedo.png" alt="Incedo Logo" style={{ width: 100, marginBottom: 20 }} />
-                    <Avatar size={120} src={profileImage || defaultImage} />
-                  </div>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 10,
+                        top: 24,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        zIndex: 2
+                      }}
+                    >
+                      <img src="/logo-incedo.png" alt="Incedo Logo" style={{ width: 100, marginBottom: 10 }} />
+                      <Avatar size={120} src={profileImage || defaultImage} />
+                    </div>
 
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: 220,
-                      top: 45,
-                      color: '#fff',
-                      zIndex: 3
-                    }}
-                  >
-                    <h2 style={{ margin: 0, textTransform: 'uppercase' }}>
-                      {formData.name || 'POONAM GUPTA'}
-                    </h2>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 220,
+                        top: 45,
+                        color: '#fff',
+                        zIndex: 3
+                      }}
+                    >
+                      <h2 style={{ margin: 0, textTransform: 'uppercase' }}>
+                        {formData.name || 'Your Name Here'}
+                      </h2>
 
-                    {formData.title && (
-                      <p style={{ fontStyle: 'italic', color: '#dbeafe', margin: '4px 0' }}>
-                        {formData.title}
-                      </p>
-                    )}
+                      {formData.title && (
+                        <p style={{ fontStyle: 'italic', color: '#dbeafe', margin: '4px 0' }}>
+                          {formData.title}
+                        </p>
+                      )}
 
-                    {formData.email && (
+                      {/* {formData.email && (
                       <p style={{ marginTop: 12, marginBottom: 4 }}>
                         <strong>Email:</strong> {formData.email}
                       </p>
@@ -739,124 +762,124 @@ ${formData.name || ''}`
                       <p style={{ margin: 0 }}>
                         <strong>GitHub:</strong> {formData.github}
                       </p>
+                    )} */}
+
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex' }}>
+                  <div style={{ width: '40%', padding: '24px', borderRight: '1px dashed #999' }}>
+
+                    {formData.skills?.length > 0 && (
+                      <>
+                        <Title level={5}>🛠 PROFESSIONAL SKILLS:</Title>
+                        <ul style={{ paddingLeft: '20px', marginBottom: 12 }}>
+                          {formData.skills.map((s, i) => (
+                            <li key={i}>{s}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+
+                    {formData.education?.length > 0 && (
+                      <>
+                        <Title level={5}>🎓 EDUCATION:</Title>
+                        {formData.education.map((e, i) => (
+                          <div key={i} style={{ marginBottom: 12 }}>
+                            {e.school && <Text strong>{e.school}</Text>}
+                            {(e.degree || e.gpa || e.date) && (
+                              <div>
+                                {e.degree && <Text>{e.degree}</Text>}
+                                {e.gpa && <> | <Text>GPA: {e.gpa}</Text></>}
+                                {e.date && <> | <Text>{e.date}</Text></>}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+
+                    {formData.certifications?.length > 0 && (
+                      <>
+                        <Title level={5}>📄 CERTIFICATIONS:</Title>
+                        <ul style={{ paddingLeft: '20px' }}>
+                          {formData.certifications.map((c, i) => <li key={i}>{c}</li>)}
+                        </ul>
+                      </>
+                    )}
+
+                    {formData.awards?.length > 0 && (
+                      <>
+                        <Title level={5}>🏆 AWARDS:</Title>
+                        <ul style={{ paddingLeft: '20px' }}>
+                          {formData.awards.map((a, i) => <li key={i}>{a}</li>)}
+                        </ul>
+                      </>
                     )}
 
                   </div>
-                </div>
-              </div>
 
-              <div style={{ display: 'flex' }}>
-                <div style={{ width: '40%', padding: '24px', borderRight: '1px dashed #999' }}>
+                  <div style={{ width: '60%', padding: '24px' }}>
 
-                  {formData.skills?.length > 0 && (
-                    <>
-                      <Title level={5}>🛠 PROFESSIONAL SKILLS:</Title>
-                      <ul style={{ paddingLeft: '20px', marginBottom: 12 }}>
-                        {formData.skills.map((s, i) => (
-                          <li key={i}>{s}</li>
+                    {formData.summary && (
+                      <>
+                        <Title level={5}>🧾 SUMMARY:</Title>
+                        <div dangerouslySetInnerHTML={{ __html: formData.summary }} />
+                      </>
+                    )}
+
+                    {/* Work Experience */}
+                    {formData.work?.length > 0 && (
+                      <>
+                        <Title level={5}>🩹 WORK EXPERIENCE:</Title>
+                        {formData.work.map((w, i) => (
+                          <div key={i} style={{ marginBottom: 16 }}>
+                            <Text strong>{w.company?.toUpperCase()}</Text> - {w.title?.toUpperCase()}<br />
+                            <Text type="secondary">{w.date}</Text>
+                            <div dangerouslySetInnerHTML={{ __html: w.description }} />
+                          </div>
                         ))}
-                      </ul>
-                    </>
-                  )}
+                      </>
+                    )}
 
-                  {formData.education?.length > 0 && (
-                    <>
-                      <Title level={5}>🎓 EDUCATION:</Title>
-                      {formData.education.map((e, i) => (
-                        <div key={i} style={{ marginBottom: 12 }}>
-                          {e.school && <Text strong>{e.school}</Text>}
-                          {(e.degree || e.gpa || e.date) && (
-                            <div>
-                              {e.degree && <Text>{e.degree}</Text>}
-                              {e.gpa && <> | <Text>GPA: {e.gpa}</Text></>}
-                              {e.date && <> | <Text>{e.date}</Text></>}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-
-                  {formData.certifications?.length > 0 && (
-                    <>
-                      <Title level={5}>📄 CERTIFICATIONS:</Title>
-                      <ul style={{ paddingLeft: '20px' }}>
-                        {formData.certifications.map((c, i) => <li key={i}>{c}</li>)}
-                      </ul>
-                    </>
-                  )}
-
-                  {formData.awards?.length > 0 && (
-                    <>
-                      <Title level={5}>🏆 AWARDS:</Title>
-                      <ul style={{ paddingLeft: '20px' }}>
-                        {formData.awards.map((a, i) => <li key={i}>{a}</li>)}
-                      </ul>
-                    </>
-                  )}
-
+                    {formData.projects?.length > 0 && (
+                      <>
+                        <Title level={5}>📌 PROJECTS:</Title>
+                        {formData.projects.map((p, i) => (
+                          <div key={i} style={{ marginBottom: 16 }}>
+                            <Text strong>{p.name}</Text>
+                            <p>{p.description}</p>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
                 </div>
 
-                <div style={{ width: '60%', padding: '24px' }}>
+                <div style={{ marginTop: 'auto', position: 'relative', height: 60 }}>
+                  <svg width="100%" height="60" viewBox="0 0 800 60" preserveAspectRatio="none">
+                    <polygon points="0,0 600,0 500,70 0,70" fill="#1d3f77" />
+                    <text x="20" y="38" fill="#fff" fontSize="18" fontStyle="italic">
+                      Proprietary and confidential
+                    </text>
+                  </svg>
 
-                  {formData.summary && (
-                    <>
-                      <Title level={5}>🧾 SUMMARY:</Title>
-                      <div dangerouslySetInnerHTML={{ __html: formData.summary }} />
-                    </>
-                  )}
-
-                  {/* Work Experience */}
-                  {formData.work?.length > 0 && (
-                    <>
-                      <Title level={5}>🩹 WORK EXPERIENCE:</Title>
-                      {formData.work.map((w, i) => (
-                        <div key={i} style={{ marginBottom: 16 }}>
-                          <Text strong>{w.company?.toUpperCase()}</Text> - {w.title?.toUpperCase()}<br />
-                          <Text type="secondary">{w.date}</Text>
-                          <div dangerouslySetInnerHTML={{ __html: w.description }} />
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-                  {formData.projects?.length > 0 && (
-                    <>
-                      <Title level={5}>📌 PROJECTS:</Title>
-                      {formData.projects.map((p, i) => (
-                        <div key={i} style={{ marginBottom: 16 }}>
-                          <Text strong>{p.name}</Text>
-                          <p>{p.description}</p>
-                        </div>
-                      ))}
-                    </>
-                  )}
+                  <img
+                    src="/logo-incedo.png"
+                    alt="Incedo Logo"
+                    style={{
+                      position: 'absolute',
+                      right: 20,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      height: 28
+                    }}
+                  />
                 </div>
               </div>
-
-              <div style={{ marginTop: 'auto', position: 'relative', height: 60 }}>
-                <svg width="100%" height="60" viewBox="0 0 800 60" preserveAspectRatio="none">
-                  <polygon points="0,0 600,0 500,70 0,70" fill="#1d3f77" />
-                  <text x="20" y="38" fill="#fff" fontSize="18" fontStyle="italic">
-                    Proprietary and confidential
-                  </text>
-                </svg>
-
-                <img
-                  src="/logo-incedo.png"
-                  alt="Incedo Logo"
-                  style={{
-                    position: 'absolute',
-                    right: 20,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    height: 28
-                  }}
-                />
-              </div>
-            </div>
-          </Card>
+            </Card>
 
             <div style={{ textAlign: 'center', padding: '16px' }}>
               <Button type="primary" onClick={downloadPDF} style={{ marginRight: 12, backgroundColor: "#1d3f77" }}>

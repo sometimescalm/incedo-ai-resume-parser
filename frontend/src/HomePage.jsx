@@ -79,7 +79,7 @@ const HomePage = () => {
 
       {/* Footer */}
       <Footer style={{ textAlign: 'center', background: '#fff' }}>
-        © 2025 ResumeCraft. All rights reserved.
+        © 2025 Incedo Intellifit. All rights reserved.
       </Footer>
     </Layout>
   );

@@ -31,6 +31,9 @@ Extract these exact fields:
 - github_portfolio: GitHub profile URL, if available.
 - linkedin_id: LinkedIn profile URL.
 - work_experience:  Return as an array of objects sorted in **reverse chronological order** in the below json format.
+  Strictly for all resumes the description for each should be in bullet points and each point on new line. 
+  Strictly each bullet point on new line.
+  Strictly each description should be maximum 450 characters
 - skills: strictly only Top 10–15 technical skills (comma-separated, no duplicates, no soft skills).Extract only the skills that are explicitly mentioned in the resume.
 - education: Return as an array of objects sorted in **reverse chronological order** in the below json format.
 - certifications: Combine all certifications into one comma-separated string.
