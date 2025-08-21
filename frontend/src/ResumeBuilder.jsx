@@ -5,10 +5,11 @@ import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import html2pdf from 'html2pdf.js';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import SemiCircularScore from './circularScore';
+import downloadPDF from './utils/downloadPDF';
+import downloadAndPrepareEmail from './utils/downloadAndPrepareEmail';
 
 const { Title, Text } = Typography;
 const { Header } = Layout;
@@ -121,12 +122,6 @@ const ResumeBuilder = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const stripHtmlTags = (html) => {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  };
-
   const addTag = (type, inputSetter, inputValue) => {
     if (inputValue.trim() !== '') {
       setFormData((prev) => ({ ...prev, [type]: [...prev[type], inputValue.trim()] }));
@@ -154,26 +149,6 @@ const ResumeBuilder = () => {
     setFormData((prev) => ({ ...prev, [field]: updated }));
   };
 
-  const downloadPDF = () => {
-    return new Promise((resolve) => {
-      const element = document.getElementById('resume-preview');
-
-      const opt = {
-        margin: [0.2, 0, 0.5, 0],
-        filename: 'resume.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          scrollY: 0,
-        },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-      };
-
-      html2pdf().from(element).set(opt).save().then(() => resolve());
-    });
-  };
-
   const getFirstJobYear = (work = []) => {
     const years = work
       .map((job) => {
@@ -187,46 +162,19 @@ const ResumeBuilder = () => {
   const firstJobYear = getFirstJobYear(formData.work);
   const currentYear = new Date().getFullYear();
   const totalExperience = firstJobYear ? currentYear - firstJobYear : 'N/A';
-  const currentCompany = formData.work?.find(w => w.date?.toLowerCase().includes("present"))?.company || 'N/A';
+  let currentCompanyEntry = formData.work?.find(
+    w => w.date?.toLowerCase().includes("present") || w.date?.toLowerCase().includes("till")
+  );
 
-  const downloadAndPrepareEmail = async () => {
-    await downloadPDF();
+  if (!currentCompanyEntry && formData.work?.length > 0) {
+    // fallback: get the latest company (assuming last entry in work is the latest)
+    currentCompanyEntry = formData.work[0];
+  }
 
-    const formatCell = (label, value, labelWidth = 20) => {
-      const val = value ? String(value) : '';
-      return `${label.padEnd(labelWidth)}: ${val}`;
-    };
+  const currentCompany = currentCompanyEntry?.company || 'N/A';
 
-    const subject = encodeURIComponent(`Resume of ${formData.name || 'Candidate'}`);
-    const body = encodeURIComponent(
-      `Hi,
 
-Please find attached resume of ${formData.name}.
 
-Candidate Summary:
-
-${formatCell('Name', formData.name)}
-${formatCell('Contact Number', formData.phone)}
-${formatCell('Email', formData.email)}
-${formatCell('Skills', formData.skills?.join(', ').slice(0, 100))}
-${formatCell('Total Experience', totalExperience + ' years')}
-${formatCell('Current Company', currentCompany)}
-
-Summary:
-${stripHtmlTags(formData.summary) || ''}
-
-Best regards,  
-${formData.name || ''}`
-    );
-
-    setShowAttachReminder(true);
-
-    setTimeout(() => {
-      setShowAttachReminder(false);
-    }, 30000);
-
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  };
 
   const calculateScore = () => {
     let score = 0;
@@ -935,15 +883,19 @@ ${formData.name || ''}`
             </Card>
 
             <div style={{ textAlign: 'center', padding: '16px' }}>
-              <Button type="primary" onClick={downloadPDF} style={{ marginRight: 12, backgroundColor: "#1d3f77" }}>
+              <Button type="primary" onClick={() => downloadPDF("resume-preview", "MyResume.pdf")} style={{ marginRight: 12, backgroundColor: "#1d3f77" }}>
                 Download PDF
               </Button>
               <Button
                 type="primary"
-                onClick={() => {
-                  downloadAndPrepareEmail();
-                  setShowAttachReminder(true);
-                }}
+                onClick={() =>
+                  downloadAndPrepareEmail({
+                    formData,
+                    totalExperience,
+                    currentCompany,
+                    setShowAttachReminder,
+                  })
+                }
                 style={{ marginRight: 12, backgroundColor: "#1d3f77" }}
               >
                 Send Email
