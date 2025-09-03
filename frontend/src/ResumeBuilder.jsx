@@ -397,7 +397,6 @@ const ResumeBuilder = () => {
                     disabled
                   />
                 </Form.Item>
-
                 <Form.Item label={<strong>Summary</strong>}>
                   <ReactQuill
                     value={formData.summary}
@@ -653,8 +652,6 @@ const ResumeBuilder = () => {
             >
               <Rate disabled value={resumeScore} />
             </div>
-
-
             <Card
               id="resume-preview"
               bordered={false}
@@ -671,7 +668,6 @@ const ResumeBuilder = () => {
                 display: 'flex',
                 flexDirection: 'column'
               }}
-
             >
               <div style={{ flex: 1 }}>
 
@@ -734,7 +730,6 @@ const ResumeBuilder = () => {
                       <h2 style={{ margin: 0, textTransform: 'uppercase' }}>
                         {formData.name || 'Your Name Here'}
                       </h2>
-
                       {formData.title && (
                         <p style={{ fontStyle: 'italic', color: '#dbeafe', margin: '4px 0' }}>
                           {formData.title}
