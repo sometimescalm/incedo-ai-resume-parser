@@ -157,6 +157,7 @@ const ResumeUpload = () => {
       alert("❌ Something went wrong during file validation or upload.");
       console.log(error)
     } finally {
+      window.location.reload();
       setLoading(false);
     }
   };
