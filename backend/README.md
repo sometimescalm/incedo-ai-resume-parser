@@ -20,7 +20,7 @@ pip install fastapi uvicorn[standard] aiofiles
 Export your API key as an environment variable:
 
 ```bash
-export API_KEY=your_gemini_api_key_here
+export GOOGLE_API_KEY=your_gemini_api_key_here
 ```
 
 ## Running the FastAPI Server
