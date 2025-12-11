@@ -7,9 +7,9 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import SemiCircularScore from './circularScore';
-import downloadPDF from './utils/downloadPDF';
-import downloadAndPrepareEmail from './utils/downloadAndPrepareEmail';
+import SemiCircularScore from '../circularScore';
+import downloadPDF from '../utils/downloadPDF';
+import downloadAndPrepareEmail from '../utils/downloadAndPrepareEmail';
 
 const { Title, Text } = Typography;
 const { Header } = Layout;
