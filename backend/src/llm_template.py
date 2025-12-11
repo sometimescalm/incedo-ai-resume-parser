@@ -72,35 +72,50 @@ Resume content: {resume_text}
 
 
 PROMPT_INTERVIEW_TEMPLATE = """
-You are an expert technical interviewer. Given the Job Description (JD) and the candidate's resume, generate interview questions tailored to the role and candidate.
+You are an expert technical interviewer. Generate interview questions tailored to the Job Description (JD), the candidate's resume, and the dynamic role metadata provided below.
+
+Role Metadata:
+- Role: {role}
+- Domain: {domain}
+- Experience Level: {experience_level}
+- Key Skills: {skills}
+- Number of Questions Required: {num_questions}
+
 Output Requirements:
 - Output must be a valid JSON object.
-- Do not include triple backticks (```), markdown formatting, or labels like “json”.
+- Do not include triple backticks, markdown formatting, or labels like "json".
 - The entire JSON must be on a single line.
-- If there are line breaks in any string, they must be escaped using \\n.
-- Return only the JSON object, in a single line, with no formatting, no extra explanation, and no markdown wrappers.
+- All strings must escape line breaks using \\n, except for the `sample_code` field.
+- The `sample_code` field must contain actual newline characters without escaping.
+- Return only the JSON object in a single line, with no additional explanation.
 
 The JSON schema must be exactly:
-
-{
+{{
     "questions": [
-        {
+        {{
             "question": "string",
             "type": "technical" | "behavioral" | "coding",
             "difficulty": "easy" | "medium" | "hard",
             "expected_answer": "string",
             "sample_code": "string (optional)",
             "hints": ["string"] (optional)
-        }
+        }}
     ]
-}
+}}
 
-Instructions:
-- Provide a list under the top-level `questions` array.
-- Include approximately 3 technical questions across difficulties, 2 behavioral, and 2 coding problems if appropriate for the JD.
-- `expected_answer` should be concise and directly useful for evaluation (max 200 words). Escape line breaks with \n.
-- `sample_code` is optional and should be provided only for coding questions (short, runnable snippets when possible).
-- `hints` is optional and can contain 1-3 short hints per question.
+Question Distribution Rules:
+- The total number of questions must be exactly {num_questions}.
+- Distribute questions dynamically using the following logic:
+  - Coding Questions: 1–3 max, ~20% of total. Use:
+      coding_count = min(3, max(1, round({num_questions} * 0.2)))
+  - Behavioral Questions: ~20% of total, minimum 2. Use:
+      behavioral_count = max(2, round({num_questions} * 0.2))
+  - Technical Questions: All remaining questions after allocating coding + behavioral.
+- The distribution must always sum to {num_questions}.
+- Technical questions should span easy, medium, and hard difficulty levels.
+- Behavioral questions should map to {role}, {domain}, and {experience_level}.
+- Coding questions should include optional `sample_code` where helpful.
+- `expected_answer` must be concise (max 200 words) and escape line breaks with \\n.
 
 Job Description:
 {jd_text}

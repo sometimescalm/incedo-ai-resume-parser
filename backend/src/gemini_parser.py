@@ -90,15 +90,13 @@ def extract_face_from_pdf(pdf_path, output_dir="static/face_images"):
     return image_paths
 
 
-def generate_interview_questions(jd_text, resume_text):
+def generate_interview_questions(context_metadata):
     result_text = ""
     try:
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         model = genai.GenerativeModel('gemini-2.5-flash')
-        #print("generate_interview_questions", resume_text)
 
-        # PROMPT_INTERVIEW_TEMPLATE contains many JSON braces which conflict with str.format.
-        prompt = PROMPT_INTERVIEW_TEMPLATE.replace("{jd_text}", jd_text).replace("{resume_text}", resume_text)
+        prompt = PROMPT_INTERVIEW_TEMPLATE.format(**context_metadata)
         response = model.generate_content(prompt)
         result_text = getattr(response, 'text', '')
         if result_text is None:

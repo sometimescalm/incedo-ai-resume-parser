@@ -1,10 +1,10 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os
 import uuid
-from src.gemini_parser import parse_resume_with_gemini, extract_text, generate_interview_questions
+from src.gemini_parser import parse_resume_with_gemini, extract_text, generate_interview_questions, safe_escape
 import aiofiles
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
@@ -49,17 +49,24 @@ async def parse_resume(file: UploadFile = File(...)):
             os.remove(temp_filepath)
 
 @app.post("/interview_question")
-async def gen_interview_question(resume: UploadFile = File(...),
-                                 jobd: UploadFile = File(...)):
+async def gen_interview_question(
+    resume: UploadFile = File(...),
+    jobd: UploadFile = File(...),
+    role: str = Form(None),
+    domain: str = Form(None),
+    experience_level: str = Form(None),
+    skills: str = Form(None),
+    num_questions: int = Form(10),
+):
     """Accept a Resume file and a Job Description file, extract text, call Gemini to generate questions, and return JSON."""
     try:
-        allowed_exts = [".pdf", ".docx", ".txt"]
+        allowed_exts = [".pdf", ".docx"]
 
         # Validate extensions        
         resume_ext = os.path.splitext(resume.filename)[1].lower()
         jd_ext = os.path.splitext(jobd.filename)[1].lower()
         if resume_ext not in allowed_exts or jd_ext not in allowed_exts:
-            raise HTTPException(status_code=400, detail="Only PDF, DOCX and TXT files are supported for resume and JD.")
+            raise HTTPException(status_code=400, detail="Only PDF, DOCX files are supported for resume and JD.")
 
         resume_temp = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}{resume_ext}")
         jd_temp = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}{jd_ext}")
@@ -74,21 +81,23 @@ async def gen_interview_question(resume: UploadFile = File(...),
             while chunk := await jobd.read(1024 * 1024):
                 await f.write(chunk)
 
-        # Extract text
-        if resume_ext == ".txt":
-            async with aiofiles.open(resume_temp, "r", encoding="utf-8", errors="ignore") as f:
-                resume_text = await f.read()
-        else:
-            resume_text = extract_text(resume_temp)
+        # Extract text (always use PDF/DOCX parser)
+        resume_text = extract_text(resume_temp)
+        jd_text = extract_text(jd_temp)
 
-        if jd_ext == ".txt":
-            async with aiofiles.open(jd_temp, "r", encoding="utf-8", errors="ignore") as f:
-                jd_text = await f.read()
-        else:
-            jd_text = extract_text(jd_temp)
+        # Build context metadata
+        context_metadata = {
+        "role": role,
+        "domain": domain,
+        "num_questions": num_questions,
+        "skills": skills,
+        "experience_level": experience_level,
+        "jd_text": jd_text,
+        "resume_text": resume_text
+        }
 
         # Build prompt and call Gemini via helper
-        result = generate_interview_questions(jd_text, resume_text)
+        result = generate_interview_questions(context_metadata)
         return JSONResponse(content=result)
 
     except HTTPException:
