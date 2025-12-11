@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os
 import uuid
-from src.gemini_parser import parse_resume_with_gemini, extract_text, generate_interview_questions, safe_escape
+from src.gemini_parser import parse_resume_with_gemini, extract_text, generate_interview_questions
 import aiofiles
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
