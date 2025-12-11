@@ -1,3 +1,35 @@
+PROMPT_BASIC_CONVERSION_TEMPLATE = """
+You are an AI bot designed to act as a professional resume parser. You are given a resume, and your task is to extract the following fields and return them in valid JSON format, matching the structure below.
+If a field is not present, leave it as an empty string or empty list.
+Output Requirements:
+- Output must be a valid JSON object.
+- Do not include triple backticks (```), markdown formatting, or labels like “json”.
+- The entire JSON must be on a single line.
+- If there are line breaks in any string, they must be escaped using \\n.
+- Return only the JSON object, in a single line, with no formatting, no extra explanation, and no markdown wrappers.
+
+Extract these exact fields:
+- full_name: Full name of the candidate.
+- email_id: Email address.
+- phone: Phone number.
+- key_skills: strictly only Top 2-3 technical skills (comma-separated, no duplicates, no soft skills).Extract only the skills that are explicitly mentioned in the resume.
+- education: Provide recent education details.
+- exerience: Total years of professional experience as a string.
+Return only the JSON object, in a single line, with no formatting, no extra explanation, and no markdown wrappers.
+JSON structure:
+{{
+    "full_name": "",
+    "email_id": "",
+    "phone": "",
+    "key_skills": "",
+    "education": "",
+    "experience": ""
+}}
+
+Resume content: {resume_text}
+"""
+
+
 PROMPT_CONVERSION_TEMPLATE = """
 You are an AI bot designed to act as a professional resume parser. You are given a resume, and your task is to extract the following fields and return them in valid JSON format, matching the structure below.
 If a field is not present, leave it as an empty string or empty list.
@@ -68,6 +100,28 @@ JSON structure:
 }}
 
 Resume content: {resume_text}
+"""
+
+
+# Prompt template for scoring a resume against a JD/role. Returns strict JSON.
+PROMPT_RANK_TEMPLATE = """
+You are an expert recruiter and hiring reviewer. Given a Job Description (JD), a role, and a candidate resume, score the candidate against the JD and role.
+Output requirements:
+- Return only a single valid JSON object (no markdown, no extra text, no backticks).
+- The entire JSON must be on one line.
+- The JSON must contain these keys: `score` (integer 0-100), `strength` (one-line string), `gaps` (one-line string), and optionally `skills_match` (integer 0-100).
+- `strength` and `gaps` must each be a concise one-line sentence (no newlines).
+
+Job Description:
+{jd_text}
+
+Role: {role}
+
+Resume:
+{resume_text}
+
+Provide the JSON now. Example:
+{"score": 92, "strength": "Strong backend experience and cloud skills.", "gaps": "Limited experience with Kubernetes.", "skills_match": 85}
 """
 
 

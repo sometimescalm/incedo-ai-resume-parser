@@ -5,13 +5,60 @@ import json
 import google.generativeai as genai
 from PIL import Image
 import numpy as np
-from .llm_template import PROMPT_CONVERSION_TEMPLATE, PROMPT_INTERVIEW_TEMPLATE
+import time
+import threading
+from collections import deque
+from .llm_template import PROMPT_CONVERSION_TEMPLATE, PROMPT_INTERVIEW_TEMPLATE,PROMPT_BASIC_CONVERSION_TEMPLATE,PROMPT_RANK_TEMPLATE
 
 try:
     import face_recognition
     FACE_RECOGNITION_AVAILABLE = True
 except ImportError:
     FACE_RECOGNITION_AVAILABLE = False
+
+
+    # Instantiate a module-level limiter. Make RPM configurable via env var.
+    LLM_RATE_LIMIT_ENABLED = os.getenv("LLM_RATE_LIMIT_ENABLED", "1") == "1"
+
+    # Simple thread-safe rate limiter to respect LLM RPM limits
+    class RateLimiter:
+        def __init__(self, max_calls_per_minute: int = 10):
+            self.max_calls = int(max_calls_per_minute)
+            self.period = 60.0
+            self.timestamps = deque()
+            self.lock = threading.Lock()
+
+        def wait_for_slot(self):
+            """Block until a slot is available under the rate limit.
+
+            Uses a sliding window algorithm. This will sleep the calling thread
+            until a request can be issued without exceeding the configured RPM.
+            """
+            while True:
+                now = time.time()
+                with self.lock:
+                    # purge old timestamps
+                    while self.timestamps and self.timestamps[0] <= now - self.period:
+                        self.timestamps.popleft()
+
+                    if len(self.timestamps) < self.max_calls:
+                        # allowed: record timestamp and proceed
+                        self.timestamps.append(now)
+                        return
+
+                    # not allowed yet; compute wait time to the earliest expiry
+                    earliest = self.timestamps[0]
+                    wait_secs = (earliest + self.period) - now + 0.05
+
+                # sleep outside the lock
+                time.sleep(max(wait_secs, 0.05))
+
+    try:
+        llm_rpm_cfg = int(os.getenv("LLM_RATE_LIMIT_RPM", "10"))
+    except Exception:
+        llm_rpm_cfg = 10
+
+    llm_rate_limiter = RateLimiter(max_calls_per_minute=llm_rpm_cfg)
 
 
 
@@ -31,12 +78,34 @@ def extract_text(file_path):
         raise ValueError("Unsupported file format")
 
 
+def get_basic_resume_info_with_gemini(file_path):
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    model = genai.GenerativeModel('gemini-2.5-flash')
+
+    resume_text = extract_text(file_path)
+    prompt = PROMPT_BASIC_CONVERSION_TEMPLATE.format(resume_text=resume_text)
+
+    # # Respect global LLM rate limits
+    # if LLM_RATE_LIMIT_ENABLED:
+    #     llm_rate_limiter.wait_for_slot()
+
+    response = model.generate_content(prompt)
+
+    result = response.text.strip()
+    result = json.loads(result)
+    return result
+
 def parse_resume_with_gemini(file_path):
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     model = genai.GenerativeModel('gemini-2.5-flash')
 
     resume_text = extract_text(file_path)
     prompt = PROMPT_CONVERSION_TEMPLATE.format(resume_text=resume_text)
+
+    # Respect global LLM rate limits
+    # if LLM_RATE_LIMIT_ENABLED:
+    #     llm_rate_limiter.wait_for_slot()
+
     response = model.generate_content(prompt)
 
     result = response.text.strip()
@@ -95,8 +164,12 @@ def generate_interview_questions(context_metadata):
     try:
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         model = genai.GenerativeModel('gemini-2.5-flash')
-
         prompt = PROMPT_INTERVIEW_TEMPLATE.format(**context_metadata)
+
+        # # Respect global LLM rate limits
+        # if LLM_RATE_LIMIT_ENABLED:
+        #     llm_rate_limiter.wait_for_slot()
+
         response = model.generate_content(prompt)
         result_text = getattr(response, 'text', '')
         if result_text is None:
@@ -113,6 +186,64 @@ def generate_interview_questions(context_metadata):
         })
 
     return result
+
+
+def score_resume_against_jd(jd_text, resume_text, role=None):
+    """Call the LLM with PROMPT_RANK_TEMPLATE to get a score, strength and gaps for the resume vs JD.
+
+    Returns a dict with at least keys: score (int), strength (str), gaps (str), skills_match (int, optional).
+    On error returns a dict with keys: error, message, raw.
+    """
+    # sanitize inputs (reuse same sanitizer logic)
+
+    jd_text = jd_text
+    resume_text = resume_text
+    role_text = (role or "").strip()
+
+    try:
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        prompt = PROMPT_RANK_TEMPLATE.replace("{jd_text}", jd_text).replace("{resume_text}", resume_text).replace("{role}", role_text)
+
+        # Respect global LLM rate limits
+        # if LLM_RATE_LIMIT_ENABLED:
+        #     llm_rate_limiter.wait_for_slot()
+
+        response = model.generate_content(prompt)
+        result_text = getattr(response, 'text', '') or ''
+        result_text = result_text.strip()
+        try:
+            parsed = json.loads(result_text)
+        except Exception:
+            # try to extract a JSON object substring
+            import re
+            m = re.search(r"\{.*\}", result_text, flags=re.S)
+            if m:
+                try:
+                    parsed = json.loads(m.group(0))
+                except Exception:
+                    raise RuntimeError(f"invalid_json: Could not parse JSON from LLM response. Raw: {result_text[:2000]}")
+            else:
+                raise RuntimeError(f"no_json_found: LLM did not return JSON. Raw: {result_text[:2000]}")
+
+        # normalize fields
+        out = {}
+        score_val = parsed.get('score', 0)
+        try:
+            out['score'] = int(score_val)
+        except Exception:
+            raise ValueError(f"invalid_score: Could not convert score to int: {score_val}")
+
+        out['strength'] = str(parsed.get('strength', ''))
+        out['gaps'] = str(parsed.get('gaps', ''))
+        if 'skills_match' in parsed:
+            try:
+                out['skills_match'] = int(parsed.get('skills_match'))
+            except Exception:
+                out['skills_match'] = None
+        return out
+    except Exception as e:
+        raise RuntimeError(f"llm_call_failed: {e}") from e
 
 
 
