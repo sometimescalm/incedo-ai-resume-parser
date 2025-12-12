@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Layout, Card, Typography, Table, Tag, Button, Space, Progress, Descriptions, Alert } from 'antd';
+import { Layout, Card, Typography, Table, Tag, Button, Space, Progress, Descriptions, Alert, message } from 'antd';
 import { 
   ArrowLeftOutlined, 
+  FileTextOutlined,
   QuestionCircleOutlined,
   TrophyOutlined,
   WarningOutlined
@@ -20,22 +21,80 @@ const RankingResults = () => {
   const rankingData = location.state?.rankingData || {};
   const jdInfo = location.state?.jdInfo || {};
   const candidates = rankingData.candidates || [];
+  const originalFiles = location.state?.originalFiles || []; // Get uploaded files
+  const jdFile = location.state?.jdFile; // Get JD file
 
   // Debug logging
   console.log('=== RANKING RESULTS PAGE ===');
   console.log('Full response:', JSON.stringify(rankingData, null, 2));
   console.log('Candidates:', candidates.length);
+  console.log('Original files received:', originalFiles.length);
   console.log('===========================');
+
+  // Create a mapping of filename to file object for easy lookup
+  const fileMap = {};
+  const duplicates = [];
+  
+  originalFiles.forEach(file => {
+    if (fileMap[file.name]) {
+      duplicates.push(file.name);
+      console.warn('Duplicate filename detected:', file.name);
+    }
+    fileMap[file.name] = file;
+  });
+
+  // Show warning if duplicates detected
+  if (duplicates.length > 0) {
+    console.warn('Duplicate filenames:', duplicates);
+    message.warning(`Duplicate filenames detected: ${duplicates.join(', ')}. Only the last uploaded file will be used.`);
+  }
+
+  console.log('File mapping created:', Object.keys(fileMap));
 
   // Separate successful candidates and errors
   const successfulCandidates = candidates.filter(c => !c.error);
   const errorCandidates = candidates.filter(c => c.error);
 
+  const handleConvertResume = (candidate) => {
+    // Find the original file by matching filename
+    const file = fileMap[candidate.filename];
+    
+    if (!file) {
+      console.error('File not found:', candidate.filename);
+      console.error('Available files:', Object.keys(fileMap));
+      message.error(`Original resume file not found: ${candidate.filename}`);
+      return;
+    }
+
+    console.log('=== CONVERT RESUME ===');
+    console.log('Candidate:', candidate.name);
+    console.log('Looking for file:', candidate.filename);
+    console.log('File found:', file.name);
+    console.log('File size:', file.size, 'bytes');
+    console.log('File type:', file.type);
+    console.log('======================');
+
+    // Navigate to parse-resume page with the actual file pre-filled
+    navigate('/parse-resume', { 
+      state: { 
+        preUploadedFile: file,
+        candidateName: candidate.name,
+        fromBulkAnalysis: true
+      } 
+    });
+  };
+
   const handleGenerateQnA = (candidate) => {
+    // Find the original resume file
+    const resumeFile = fileMap[candidate.filename];
+    
     navigate('/interview-qna', {
       state: {
         candidateData: candidate,
-        jdData: rankingData.jd_data
+        jdData: rankingData.jd_data,
+        jdInfo: jdInfo, // ← Add this to pass role information
+        preUploadedResume: resumeFile, // Pass actual file
+        preUploadedJD: jdFile // Pass JD file
       }
     });
   };
@@ -144,18 +203,41 @@ const RankingResults = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
-      render: (_, record) => (
-        <Button 
-          type="primary"
-          size="small"
-          icon={<QuestionCircleOutlined />}
-          onClick={() => handleGenerateQnA(record)}
-          style={{ backgroundColor: '#1d3f77' }}
-        >
-          Generate QnA
-        </Button>
-      ),
+      width: 240,
+      render: (_, record) => {
+        const hasFile = !!fileMap[record.filename];
+        
+        return (
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space>
+              <Button 
+                type="primary"
+                size="small"
+                icon={<FileTextOutlined />}
+                onClick={() => handleConvertResume(record)}
+                style={{ backgroundColor: '#1d3f77' }}
+                disabled={!hasFile}
+                title={!hasFile ? 'Original file not available' : `Convert ${record.filename}`}
+              >
+                Convert
+              </Button>
+              <Button 
+                size="small"
+                icon={<QuestionCircleOutlined />}
+                onClick={() => handleGenerateQnA(record)}
+                title={`Generate questions for ${record.name}`}
+              >
+                QnA
+              </Button>
+            </Space>
+            {hasFile && (
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                📄 {record.filename.length > 20 ? record.filename.substring(0, 20) + '...' : record.filename}
+              </Text>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -402,6 +484,17 @@ const RankingResults = () => {
               style={{ padding: 0 }}
             />
           </Card>
+
+          {/* Missing Files Warning */}
+          {originalFiles.length === 0 && (
+            <Alert
+              message="Note: Convert Feature Unavailable"
+              description="Original resume files are not available. This usually happens when you navigated here directly or refreshed the page. Please go back and re-analyze resumes to enable the Convert feature."
+              type="warning"
+              showIcon
+              style={{ marginTop: 24, borderRadius: 12 }}
+            />
+          )}
 
           {/* Key Skills Warning */}
           {successfulCandidates.some(c => c.key_skills === null && !c.parsed_data?.key_skills) && (

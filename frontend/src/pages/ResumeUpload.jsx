@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import 'antd/dist/reset.css';
-import { Upload, Typography, Card, Button, Layout, Steps, Spin } from 'antd';
+import { Upload, Typography, Card, Button, Layout, Steps, Spin, message, Alert } from 'antd';
 import { InboxOutlined, ArrowRightOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.entry';
 import mammoth from 'mammoth';
@@ -19,8 +19,29 @@ const ResumeUpload = () => {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [showSteps, setShowSteps] = useState(false);
+  const [preLoadedInfo, setPreLoadedInfo] = useState(null);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check for pre-uploaded file from bulk analysis
+  useEffect(() => {
+    const preUploadedFile = location.state?.preUploadedFile;
+    const candidateName = location.state?.candidateName;
+    const fromBulkAnalysis = location.state?.fromBulkAnalysis;
+
+    if (preUploadedFile && fromBulkAnalysis) {
+      console.log('=== PRE-UPLOADED FILE DETECTED ===');
+      console.log('File:', preUploadedFile.name);
+      console.log('Candidate:', candidateName);
+      console.log('Size:', preUploadedFile.size, 'bytes');
+      console.log('==================================');
+
+      setSelectedFile(preUploadedFile);
+      setPreLoadedInfo({ candidateName, fromBulkAnalysis });
+      message.success(`Resume pre-loaded for ${candidateName}!`);
+    }
+  }, [location]);
 
   const stepItems = [
     { title: 'Analyzing your uploaded resume' },
@@ -37,6 +58,7 @@ const ResumeUpload = () => {
     showUploadList: false,
     beforeUpload: (file) => {
       setSelectedFile(file);
+      setPreLoadedInfo(null); // Clear pre-loaded info if user uploads new file
       return false;
     },
   };
@@ -191,6 +213,17 @@ const ResumeUpload = () => {
         >
           <Title level={3} style={{ color: '#1d3f77', marginBottom: 24 }}>Upload Your Resume</Title>
 
+          {/* Show info if file was pre-loaded from bulk analysis */}
+          {preLoadedInfo && (
+            <Alert
+              message={`Resume Pre-Loaded: ${preLoadedInfo.candidateName}`}
+              description="This resume was automatically loaded from Bulk Resume Analysis. Click 'Proceed' to convert it to the Incedo format."
+              type="success"
+              showIcon
+              style={{ marginBottom: 24, textAlign: 'left' }}
+            />
+          )}
+
           <Dragger {...props} style={{ borderRadius: 8, backgroundColor: '#fafafa' }}>
             <p className="ant-upload-drag-icon">
               <InboxOutlined style={{ fontSize: 48, color: '#1d3f77' }} />
@@ -214,6 +247,7 @@ const ResumeUpload = () => {
                 style={{ marginTop: 24, backgroundColor: "#1d3f77" }}
                 size="large"
                 onClick={handleProceed}
+                loading={loading}
               >
                 Proceed
               </Button>
@@ -253,8 +287,8 @@ const ResumeUpload = () => {
               )}
             </>
           )}
-      </Card>
-    </Content>
+        </Card>
+      </Content>
     </Layout >
   );
 };

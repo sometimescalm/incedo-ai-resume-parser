@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Layout, Card, Typography, Upload, Form, Input, Select, Slider, Button, Steps, message, Row, Col, Badge, Divider } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Layout, Card, Typography, Upload, Form, Input, Select, Slider, Button, Steps, message, Row, Col, Badge, Divider, Alert } from 'antd';
 import {
   InboxOutlined,
   FileTextOutlined,
@@ -12,7 +12,7 @@ import {
   HomeOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const { Header, Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -20,12 +20,71 @@ const { Dragger } = Upload;
 
 const InterviewQnA = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form] = Form.useForm();
   const [resumeFile, setResumeFile] = useState(null);
   const [jdFile, setJdFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [numQuestions, setNumQuestions] = useState(10);
+  const [preLoadedInfo, setPreLoadedInfo] = useState(null);
+
+  // Check for pre-uploaded files from bulk analysis
+  useEffect(() => {
+    const preUploadedResume = location.state?.preUploadedResume;
+    const preUploadedJD = location.state?.preUploadedJD;
+    const candidateData = location.state?.candidateData;
+    const jdInfo = location.state?.jdInfo; // ← Get jdInfo for role
+
+    if (preUploadedResume || preUploadedJD) {
+      console.log('=== PRE-UPLOADED FILES DETECTED ===');
+      console.log('Resume:', preUploadedResume?.name);
+      console.log('JD:', preUploadedJD?.name);
+      console.log('Candidate:', candidateData?.name);
+      console.log('JD Info:', jdInfo);
+      console.log('==================================');
+    }
+
+    if (preUploadedResume) {
+      setResumeFile(preUploadedResume);
+      message.success(`Resume pre-loaded: ${preUploadedResume.name}`);
+    }
+
+    if (preUploadedJD) {
+      setJdFile(preUploadedJD);
+      message.success(`Job Description pre-loaded`);
+    }
+
+    if (candidateData) {
+      setPreLoadedInfo({
+        candidateName: candidateData.name,
+        candidateEmail: candidateData.email,
+        fromBulkAnalysis: true
+      });
+
+      // Extract skills from parsed_data.key_skills (it's a string)
+      const skills = candidateData.parsed_data?.key_skills || '';
+      
+      // Get role from jdInfo (passed from bulk analysis)
+      const role = jdInfo?.role || '';
+
+      console.log('=== PRE-FILLED FORM DATA ===');
+      console.log('Candidate Data:', candidateData);
+      console.log('Parsed Data:', candidateData.parsed_data);
+      console.log('Role from jdInfo:', role);
+      console.log('Skills from parsed_data.key_skills:', skills);
+      console.log('===========================');
+
+      // Pre-fill form fields with candidate data
+      form.setFieldsValue({
+        role: role,
+        domain: '',
+        experience_level: 'mid', // Default since we don't have exact mapping
+        skills: skills,
+        num_questions: 10
+      });
+    }
+  }, [location, form]);
 
   const resumeUploadProps = {
     name: 'resume',
@@ -34,6 +93,7 @@ const InterviewQnA = () => {
     showUploadList: false,
     beforeUpload: (file) => {
       setResumeFile(file);
+      setPreLoadedInfo(null); // Clear pre-loaded info if user uploads new file
       message.success(`${file.name} uploaded successfully!`);
       return false;
     },
@@ -270,6 +330,28 @@ const InterviewQnA = () => {
           }}
           bodyStyle={{ padding: '48px' }}
         >
+          {/* Show info if files were pre-loaded from bulk analysis */}
+          {preLoadedInfo && (
+            <Alert
+              message={`Interview Questions for: ${preLoadedInfo.candidateName}`}
+              description={
+                <div>
+                  <Text>Resume and Job Description have been pre-loaded from Bulk Resume Analysis.</Text>
+                  {preLoadedInfo.candidateEmail && (
+                    <div style={{ marginTop: 4 }}>
+                      <Text type="secondary">Email: {preLoadedInfo.candidateEmail}</Text>
+                    </div>
+                  )}
+                </div>
+              }
+              type="success"
+              showIcon
+              style={{ marginBottom: 32 }}
+              closable
+              onClose={() => setPreLoadedInfo(null)}
+            />
+          )}
+
           <Form
             form={form}
             layout="vertical"
