@@ -2,13 +2,10 @@ import pdfplumber
 import docx2txt
 import os
 import json
-import google.generativeai as genai
+from .llm_client import llm_client
 from PIL import Image
 import numpy as np
-import time
-import threading
-from collections import deque
-from .llm_template import PROMPT_CONVERSION_TEMPLATE, PROMPT_INTERVIEW_TEMPLATE,PROMPT_BASIC_CONVERSION_TEMPLATE,PROMPT_RANK_TEMPLATE
+from .llm_template import PROMPT_CONVERSION_TEMPLATE, PROMPT_INTERVIEW_TEMPLATE, PROMPT_BASIC_CONVERSION_TEMPLATE, PROMPT_RANK_TEMPLATE
 
 try:
     import face_recognition
@@ -17,48 +14,7 @@ except ImportError:
     FACE_RECOGNITION_AVAILABLE = False
 
 
-    # Instantiate a module-level limiter. Make RPM configurable via env var.
-    LLM_RATE_LIMIT_ENABLED = os.getenv("LLM_RATE_LIMIT_ENABLED", "1") == "1"
-
-    # Simple thread-safe rate limiter to respect LLM RPM limits
-    class RateLimiter:
-        def __init__(self, max_calls_per_minute: int = 10):
-            self.max_calls = int(max_calls_per_minute)
-            self.period = 60.0
-            self.timestamps = deque()
-            self.lock = threading.Lock()
-
-        def wait_for_slot(self):
-            """Block until a slot is available under the rate limit.
-
-            Uses a sliding window algorithm. This will sleep the calling thread
-            until a request can be issued without exceeding the configured RPM.
-            """
-            while True:
-                now = time.time()
-                with self.lock:
-                    # purge old timestamps
-                    while self.timestamps and self.timestamps[0] <= now - self.period:
-                        self.timestamps.popleft()
-
-                    if len(self.timestamps) < self.max_calls:
-                        # allowed: record timestamp and proceed
-                        self.timestamps.append(now)
-                        return
-
-                    # not allowed yet; compute wait time to the earliest expiry
-                    earliest = self.timestamps[0]
-                    wait_secs = (earliest + self.period) - now + 0.05
-
-                # sleep outside the lock
-                time.sleep(max(wait_secs, 0.05))
-
-    try:
-        llm_rpm_cfg = int(os.getenv("LLM_RATE_LIMIT_RPM", "10"))
-    except Exception:
-        llm_rpm_cfg = 10
-
-    llm_rate_limiter = RateLimiter(max_calls_per_minute=llm_rpm_cfg)
+from .llm_client import llm_client
 
 
 
@@ -79,37 +35,21 @@ def extract_text(file_path):
 
 
 def get_basic_resume_info_with_gemini(file_path):
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    model = genai.GenerativeModel('gemini-2.5-flash')
-
     resume_text = extract_text(file_path)
     prompt = PROMPT_BASIC_CONVERSION_TEMPLATE.format(resume_text=resume_text)
 
-    # # Respect global LLM rate limits
-    # if LLM_RATE_LIMIT_ENABLED:
-    #     llm_rate_limiter.wait_for_slot()
-
-    response = model.generate_content(prompt)
-
-    result = response.text.strip()
-    result = json.loads(result)
+    response = llm_client.generate(prompt)
+    result_text = getattr(response, "text", "") or ""
+    result = json.loads(result_text)
     return result
 
 def parse_resume_with_gemini(file_path):
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    model = genai.GenerativeModel('gemini-2.5-flash')
-
     resume_text = extract_text(file_path)
     prompt = PROMPT_CONVERSION_TEMPLATE.format(resume_text=resume_text)
 
-    # Respect global LLM rate limits
-    # if LLM_RATE_LIMIT_ENABLED:
-    #     llm_rate_limiter.wait_for_slot()
-
-    response = model.generate_content(prompt)
-
-    result = response.text.strip()
-    result = json.loads(result)
+    response = llm_client.generate(prompt)
+    result_text = getattr(response, "text", "") or ""
+    result = json.loads(result_text)
 
     # Extract face images if PDF
     ext = os.path.splitext(file_path)[1].lower()
@@ -162,15 +102,8 @@ def extract_face_from_pdf(pdf_path, output_dir="static/face_images"):
 def generate_interview_questions(context_metadata):
     result_text = ""
     try:
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = PROMPT_INTERVIEW_TEMPLATE.format(**context_metadata)
-
-        # # Respect global LLM rate limits
-        # if LLM_RATE_LIMIT_ENABLED:
-        #     llm_rate_limiter.wait_for_slot()
-
-        response = model.generate_content(prompt)
+        response = llm_client.generate(prompt)
         result_text = getattr(response, 'text', '')
         if result_text is None:
             result_text = ''
@@ -201,15 +134,8 @@ def score_resume_against_jd(jd_text, resume_text, role=None):
     role_text = (role or "").strip()
 
     try:
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = PROMPT_RANK_TEMPLATE.replace("{jd_text}", jd_text).replace("{resume_text}", resume_text).replace("{role}", role_text)
-
-        # Respect global LLM rate limits
-        # if LLM_RATE_LIMIT_ENABLED:
-        #     llm_rate_limiter.wait_for_slot()
-
-        response = model.generate_content(prompt)
+        response = llm_client.generate(prompt)
         result_text = getattr(response, 'text', '') or ''
         result_text = result_text.strip()
         try:

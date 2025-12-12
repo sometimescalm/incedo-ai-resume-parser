@@ -14,3 +14,4 @@ python-dotenv
 numpy
 dlib
 face_recognition
+openai>=1.0.0

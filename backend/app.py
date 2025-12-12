@@ -52,7 +52,7 @@ def process_resume_sync(fpath, fname, jd_text, role):
             "experience": parsed.get('experience'),
             "skills_match": score_res.get('skills_match'),
             "education": parsed.get('education', []),
-            "key_skills": parsed.get('skills'),
+            "key_skills": parsed.get('key_skills'),
             "gap_analysis": score_res.get('gaps'),
             "summary": score_res.get('strength'),
         }
